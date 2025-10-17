@@ -9,6 +9,12 @@ import {
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import { getQueryClient, TRPCProvider } from "./lib/trpc.config";
+import { useState } from "react";
+import { createTRPCClient, httpBatchLink } from "@trpc/client";
+import type { AppRouter } from "../../server/src/app/trpc-routes";
+import { envConf } from "./lib/envConf";
+import { QueryClientProvider } from "@tanstack/react-query";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -42,7 +48,30 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return <Outlet />;
+  const queryClient = getQueryClient();
+  const [trpcClient] = useState(() =>
+    createTRPCClient<AppRouter>({
+      links: [
+        httpBatchLink({
+          url: envConf.VITE_API_URL + "/api/v1/trpc",
+          fetch(url, options) {
+            return fetch(url, {
+              ...options,
+              credentials: "include", // This sends cookies
+            });
+          },
+        }),
+      ],
+    })
+  );
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
+        <Outlet />
+      </TRPCProvider>
+    </QueryClientProvider>
+  );
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
