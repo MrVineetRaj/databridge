@@ -13,15 +13,32 @@
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
+    "@types/cookie-parser": "^1.4.9",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
+    "@types/express-session": "^1.18.2",
     "@types/node": "^24.8.1",
+    "@types/passport": "^1.0.17",
+    "@types/passport-github2": "^1.2.9",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@prisma/client": "6.17.1",
+    "@trpc/server": "^11.6.0",
+    "connect-redis": "^9.0.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
     "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
+    "express-session": "^1.18.2",
+    "passport": "^0.7.0",
+    "passport-github2": "^0.1.12",
+    "prisma": "^6.17.1",
+    "redis": "^5.8.3",
+    "winston": "^3.18.3",
     "zod": "^4.1.12"
   }
 }
