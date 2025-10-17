@@ -1,7 +1,7 @@
 import { envConf } from "./envConf";
 import logger, { loggerMetadata } from "./logger";
 import { TRPCError } from "@trpc/server";
-import { Context } from "../trpc";
+import { AuthedContext, Context } from "../trpc";
 
 /**
  * This a function handle Try and Catch for all express route function b default and sned them to global error handler for processing
@@ -52,60 +52,65 @@ export const AsyncHandler = (fn: Function) => {
   };
 };
 
-type TRPCHandlerFunction<TInput = any, TOutput = any> = (
-  input: TInput,
-  ctx: Context
-) => Promise<TOutput> | TOutput;
+type TRPCHandlerFunction<
+  TInput = any,
+  TOutput = any,
+  TContext extends Context = Context
+> = (input: TInput, ctx: TContext) => Promise<TOutput> | TOutput;
 
-export const TRPCAsyncHandler = <TInput = any, TOutput = any>(
-  fn: TRPCHandlerFunction<TInput, TOutput>
+export const TRPCAsyncHandler = <
+  TInput = any,
+  TOutput = any,
+  TContext extends Context = Context
+>(
+  fn: TRPCHandlerFunction<TInput, TOutput, TContext>
 ) => {
-  return async (opts: { input: TInput; ctx: Context }) => {
+  return async (opts: { input: TInput; ctx: TContext }) => {
     const currTime = Date.now();
     let statusCode = 200;
     let error: any = null;
 
     try {
       const result = await Promise.resolve(fn(opts.input, opts.ctx));
-      
+
       // Extract status code from ApiResponse if present
-      if (result && typeof result === 'object' && 'statusCode' in result) {
+      if (result && typeof result === "object" && "statusCode" in result) {
         statusCode = (result as any).statusCode;
       }
-      
+
       return result;
     } catch (e: any) {
       error = e;
-      
+
       // Extract status code from error
       if (e && e.statusCode) {
         statusCode = e.statusCode;
       } else if (e instanceof TRPCError) {
         // Map TRPC error codes to HTTP status codes
         const errorCodeMap: Record<string, number> = {
-          'BAD_REQUEST': 400,
-          'UNAUTHORIZED': 401,
-          'FORBIDDEN': 403,
-          'NOT_FOUND': 404,
-          'METHOD_NOT_SUPPORTED': 405,
-          'TIMEOUT': 408,
-          'CONFLICT': 409,
-          'PRECONDITION_FAILED': 412,
-          'PAYLOAD_TOO_LARGE': 413,
-          'UNPROCESSABLE_CONTENT': 422,
-          'TOO_MANY_REQUESTS': 429,
-          'CLIENT_CLOSED_REQUEST': 499,
-          'INTERNAL_SERVER_ERROR': 500,
+          BAD_REQUEST: 400,
+          UNAUTHORIZED: 401,
+          FORBIDDEN: 403,
+          NOT_FOUND: 404,
+          METHOD_NOT_SUPPORTED: 405,
+          TIMEOUT: 408,
+          CONFLICT: 409,
+          PRECONDITION_FAILED: 412,
+          PAYLOAD_TOO_LARGE: 413,
+          UNPROCESSABLE_CONTENT: 422,
+          TOO_MANY_REQUESTS: 429,
+          CLIENT_CLOSED_REQUEST: 499,
+          INTERNAL_SERVER_ERROR: 500,
         };
         statusCode = errorCodeMap[e.code] || 500;
       } else {
         statusCode = 500;
       }
-      
+
       throw e;
     } finally {
       logger.api(
-        opts.ctx.req.originalUrl || 'trpc',
+        opts.ctx.req.originalUrl || "trpc",
         loggerMetadata.user({
           statusCode: statusCode,
           timeTaken: Date.now() - currTime,
@@ -118,26 +123,28 @@ export const TRPCAsyncHandler = <TInput = any, TOutput = any>(
 /**
  * It is class to standardize every ApiResponse going out from this server
  */
-export class ApiResponse {
+export class ApiResponse<T = any> {
   statusCode: number;
   success: string;
   message: string;
-  data?: any;
+  data?: T;
 
   constructor({
     statusCode,
     message,
-    data = null,
+    data,
   }: {
     statusCode: number;
     message: string;
-    data?: any;
+    data?: T;
   }) {
     this.statusCode = statusCode;
     this.success =
       statusCode < 300 ? "OK" : statusCode < 400 ? "WARNING" : "ERROR";
     this.message = message;
-    this.data = data;
+    if (data) {
+      this.data = data;
+    }
   }
 }
 

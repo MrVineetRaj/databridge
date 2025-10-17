@@ -1,6 +1,9 @@
 import { useTRPC } from "~/lib/trpc.config";
 import type { Route } from "./+types/home";
 import { useQuery } from "@tanstack/react-query";
+import { useUserStore } from "~/store/user-store";
+import { useEffect } from "react";
+import { Navbar } from "~/components/shared/nav-bar";
 export function meta({}: Route.MetaArgs) {
   return [
     { title: "New React Router App" },
@@ -9,9 +12,9 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Home() {
-  const trpc = useTRPC();
-  const { data: healthResult } = useQuery(
-    trpc.healthRoutes.trpcHealth.queryOptions()
+  return (
+    <main className="w-screen h-screen">
+      <Navbar />
+    </main>
   );
-  return <p className="p-8">{healthResult?.message}</p>;
 }
