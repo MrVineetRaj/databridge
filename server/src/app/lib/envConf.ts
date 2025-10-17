@@ -18,6 +18,12 @@ const envSchema = z.object({
   SESSION_SECRET: z.string().min(1, "SESSION_SECRET is required"),
   REDIS_HOST: z.string().min(1, "REDIS_HOST is required"),
   REDIS_PORT: z.string().min(1, "REDIS_PORT is required"),
+  DATABASE_ADMIN_USER: z.string().min(1, "DATABASE_ADMIN_USER is required"),
+  DATABASE_ADMIN_PASSWORD: z
+    .string()
+    .min(1, "DATABASE_ADMIN_PASSWORD is required"),
+  DATABASE_HOST: z.string().min(1, "DATABASE_HOST is required"),
+  DATABASE_PORT: z.string().min(1, "DATABASE_PORT is required"),
 });
 
 /**

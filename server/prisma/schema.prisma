@@ -26,4 +26,24 @@ model User {
   name      String
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
+
+  projects Project[]
+}
+
+
+model Project {
+  id        String   @id @default(cuid())
+  projectTitle     String  
+  projectDescription      String 
+  userId String
+  dbUser String?
+  dbName String?
+  dbDomain String?
+  dbPassword String?
+  dbSchema String?
+
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId],references: [id],onDelete: Cascade)
 }

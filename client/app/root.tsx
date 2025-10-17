@@ -10,11 +10,13 @@ import {
 import type { Route } from "./+types/root";
 import "./app.css";
 import { getQueryClient, TRPCProvider } from "./lib/trpc.config";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import type { AppRouter } from "../../server/src/app/trpc-routes";
 import { envConf } from "./lib/envConf";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { useUserStore } from "./store/user-store";
+import { Toaster } from "sonner";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -48,6 +50,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const { isAuthenticated, error, fetchProfile, loadingUser, user } =
+    useUserStore();
+  useEffect(() => {
+    if (!isAuthenticated && !error) {
+      fetchProfile();
+    }
+  }, [loadingUser]);
   const queryClient = getQueryClient();
   const [trpcClient] = useState(() =>
     createTRPCClient<AppRouter>({
@@ -69,6 +78,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
         <Outlet />
+        <Toaster position="top-right" richColors/>
       </TRPCProvider>
     </QueryClientProvider>
   );

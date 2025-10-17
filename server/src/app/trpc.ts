@@ -27,7 +27,7 @@ export type Context = ReturnType<typeof createTRPCContext>;
 /**
  * Creating the Authentication middleware type
  */
-type AuthedContext = Context & {
+export type AuthedContext = Context & {
   user: User;
   role: string;
   token: string;
