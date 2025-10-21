@@ -24,6 +24,31 @@ export function registerRoutes() {
         })
       )
       .query(TRPCAsyncHandler(actions.getProjectById.bind(actions))),
+    getDatabasesInsideProject: protectedProcedure
+      .input(
+        z.object({
+          projectId: z.string(),
+        })
+      )
+      .query(TRPCAsyncHandler(actions.getDatabasesInsideProject.bind(actions))),
+    getTablesOfADatabase: protectedProcedure
+      .input(
+        z.object({
+          projectId: z.string(),
+          dbName: z.string(),
+        })
+      )
+      .query(TRPCAsyncHandler(actions.getTablesOfADatabase.bind(actions))),
+    getTableContent: protectedProcedure
+      .input(
+        z.object({
+          dbName: z.string(),
+          tableName: z.string(),
+          page: z.number(),
+          limit: z.number(),
+        })
+      )
+      .query(TRPCAsyncHandler(actions.getTableContent.bind(actions))),
   });
 
   return projectRoutes;

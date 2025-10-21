@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { Pool } from "pg";
+import { Pool, Client } from "pg";
 import format from "pg-format";
 import { envConf } from "../lib/envConf";
 
@@ -78,7 +78,11 @@ export class PostgresServices {
     }
   }
 
-  async getDatabasesForUser({platformUsername}:{platformUsername: string}): Promise<string[]> {
+  async getDatabasesForUser({
+    platformUsername,
+  }: {
+    platformUsername: string;
+  }): Promise<string[]> {
     // We look for DB owners that start with the platform username, e.g., 'vineet_%'
     const userPattern = `${platformUsername}%`;
 
@@ -99,6 +103,112 @@ export class PostgresServices {
         (error as Error).message
       );
       throw new Error("Could not fetch databases.");
+    }
+  }
+
+  async getTablesForDatabase({
+    dbUserName,
+    dbName,
+  }: {
+    dbUserName: string;
+    dbName: string;
+  }): Promise<string[]> {
+    // We will list all tables owned by this dbUserName inside dbName
+    const query = format(
+      `
+  SELECT n.nspname AS schema_name,
+         c.relname AS table_name
+  FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  JOIN pg_roles r ON r.oid = c.relowner
+  WHERE c.relkind = 'r'
+    AND n.nspname NOT IN ('pg_catalog', 'information_schema');
+`,
+      dbUserName
+    );
+
+    try {
+      // Ensure you're connected to the target database (dbName)
+      // const client = await this.pool.connect();
+      await this.pool.query(`SET search_path TO ${dbName};`);
+
+      const result = await this.pool.query(query);
+
+      // Map to array of strings like ['users', 'orders', 'transactions']
+      return result.rows
+        .map((row) => `${row.table_name}`)
+        .filter((it) => !it.startsWith("_"));
+    } catch (error) {
+      console.error(
+        `Failed to fetch tables for ${dbUserName} in ${dbName}:`,
+        (error as Error).message
+      );
+      throw new Error("Could not fetch tables.");
+    }
+  }
+
+  async getTableContentPaginated({
+    dbName,
+    tableName,
+    page = 1,
+    limit = 20,
+  }: {
+    dbName: string;
+    tableName: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const offset = (page - 1) * limit;
+    let schema = "public";
+    let pureTable = tableName;
+
+    if (tableName.includes(".")) {
+      const [sch, tbl] = tableName.split(".");
+      schema = sch as string;
+      pureTable = tbl as string;
+    }
+
+    try {
+      // Safe, parameterized query
+      // Detect if table name is quoted (case-sensitive)
+      const isQuoted = pureTable.startsWith('"') && pureTable.endsWith('"');
+      const safeQuery = isQuoted
+        ? `SELECT * FROM ${schema}.${pureTable} OFFSET ${offset} LIMIT ${limit};`
+        : format(
+            `SELECT * FROM %I.%I OFFSET %L LIMIT %L;`,
+            schema,
+            pureTable,
+            offset,
+            limit
+          );
+
+      const safeCountQuery = isQuoted
+        ? `SELECT COUNT(*) AS total FROM ${schema}.${pureTable};`
+        : format(`SELECT COUNT(*) AS total FROM %I.%I;`, schema, pureTable);
+
+      const [dataResult, countResult] = await Promise.all([
+        this.pool.query(safeQuery),
+        this.pool.query(safeCountQuery),
+      ]);
+
+      const total = parseInt(countResult.rows[0].total, 10);
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        data: dataResult.rows,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+        },
+      };
+    } catch (error) {
+      console.error(
+        `❌ Failed to fetch paginated data for table ${tableName} in DB ${dbName}:`,
+        error
+      );
+      throw new Error("Could not fetch table data.");
     }
   }
 }

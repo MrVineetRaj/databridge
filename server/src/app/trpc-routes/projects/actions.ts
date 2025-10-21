@@ -30,6 +30,7 @@ export class Actions {
         dbUser: dbInfo.dbUsername, // Store the generated username
         dbPassword: dbInfo.dbPassword,
         dbName: dbInfo.dbName,
+        dbDomain: "localhost:5432",
       },
     });
 
@@ -67,15 +68,107 @@ export class Actions {
     });
 
     const pgService = new PostgresServices(adminPool);
-    const dbCnt = await pgService.getDatabasesForUser({
+    const dbNames = await pgService.getDatabasesForUser({
       platformUsername: project?.dbUser!,
     });
-    console.log(dbCnt);
+    
 
     const result = {
       project,
-      detail: { dbCnt: dbCnt.length },
+      detail: { dbCnt: dbNames.length },
     };
+    return new ApiResponse<typeof result>({
+      message: "Project fetched successfully",
+      statusCode: 200,
+      data: result,
+    });
+  }
+
+  async getDatabasesInsideProject(
+    input: { projectId: string },
+    ctx: AuthedContext
+  ) {
+    const { user } = ctx;
+
+    const project = await db.project.findUnique({
+      where: {
+        userId: user.id,
+        id: input.projectId,
+      },
+    });
+
+    const pgService = new PostgresServices(adminPool);
+    const dbNames = await pgService.getDatabasesForUser({
+      platformUsername: project?.dbUser!,
+    });
+
+    const result = dbNames;
+    return new ApiResponse<typeof result>({
+      message: "Project fetched successfully",
+      statusCode: 200,
+      data: result,
+    });
+  }
+
+  async getTablesOfADatabase(
+    input: { projectId: string; dbName: string },
+    ctx: AuthedContext
+  ) {
+    const { user } = ctx;
+
+    const project = await db.project.findUnique({
+      where: {
+        userId: user.id,
+        id: input.projectId,
+      },
+    });
+
+    const pgService = new PostgresServices(adminPool);
+    const tableNames = await pgService.getTablesForDatabase({
+      dbUserName: project?.dbUser!,
+      dbName: input.dbName,
+    });
+
+    const result = tableNames;
+
+    return new ApiResponse<typeof result>({
+      message: "Project fetched successfully",
+      statusCode: 200,
+      data: result,
+    });
+  }
+
+  async getTableContent(
+    input: { dbName: string; tableName: string; page?: number; limit?: number },
+    ctx: AuthedContext
+  ) {
+    const { dbName, tableName } = input;
+
+    if (tableName.includes("XXXXX")) {
+      const result = {
+        data: [],
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 0,
+          totalPages: 0,
+        },
+      };
+      return new ApiResponse<typeof result>({
+        message: "Project fetched successfully",
+        statusCode: 200,
+        data: result,
+      });
+    }
+    const pgService = new PostgresServices(adminPool);
+    const tableContent = await pgService.getTableContentPaginated({
+      dbName,
+      tableName,
+      page: input?.page ?? 1,
+      limit: input?.limit ?? 20,
+    });
+
+    const result = tableContent;
     return new ApiResponse<typeof result>({
       message: "Project fetched successfully",
       statusCode: 200,
