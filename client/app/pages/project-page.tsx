@@ -7,7 +7,14 @@ import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
 import { useTRPC } from "~/lib/trpc.config";
 import { useUserStore } from "~/store/user-store";
+import type { Route } from "../+types/root";
 
+export function meta({}: Route.MetaArgs) {
+  return [
+    { title: "New React Router App" },
+    { name: "description", content: "Welcome to React Router!" },
+  ];
+}
 const ConsolePage = () => {
   const { project_id } = useParams();
   const { user } = useUserStore();
@@ -65,10 +72,10 @@ const ConsolePage = () => {
       setProjectDetails(projectDetailsFromDb?.data?.project);
       setCardDetails({
         ...cardDetails,
-        databases:{
+        databases: {
           ...cardDetails["databases"],
-          val:`${projectDetailsFromDb?.data?.detail.dbCnt}`
-        }
+          val: `${projectDetailsFromDb?.data?.detail.dbCnt}`,
+        },
       });
     }
   }, [projectDetailsFromDb]);
@@ -84,9 +91,7 @@ const ConsolePage = () => {
   return (
     <>
       <header className="flex items-center h-14 bg-sidebar border-b w-full p-4">
-        <p className="font-semibold">
-          {projectDetails?.projectTitle}
-        </p>
+        <p className="font-semibold">{projectDetails?.projectTitle}</p>
       </header>
       <div className="p-4 space-y-8">
         {" "}
@@ -109,13 +114,9 @@ const ConsolePage = () => {
           <span className="flex items-center gap-2">
             <pre className="p-2 bg-background border rounded-md w-full text-sm text-muted-foreground text-wrap">{`postgres://${
               showingCred ? projectDetails?.dbUser : "<********>"
-            }:${
-              showingCred
-                ? projectDetails?.dbPassword
-                : "<********>"
-            }@${projectDetails?.dbDomain}/${
-              projectDetails?.dbName
-            }`}</pre>
+            }:${showingCred ? projectDetails?.dbPassword : "<********>"}@${
+              projectDetails?.dbDomain
+            }/${projectDetails?.dbName}`}</pre>
             <Button
               variant={"outline"}
               onClick={() => {
