@@ -19,7 +19,14 @@ services:
       - '6379:6379'
     volumes:
       - redis-data:/data
-
+  
+  prom-server:
+    image: prom/prometheus
+    ports:
+      - 9090:9090
+    volumes:
+      - ./prometheus-config.yml:/etc/prometheus/prometheus.yml
+      
 volumes:
   redis-data:
   pg-data:

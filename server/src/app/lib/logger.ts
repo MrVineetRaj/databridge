@@ -1,4 +1,5 @@
 import winston, { LeveledLogMethod, Logger } from "winston";
+import LokiTransport from "winston-loki";
 
 /**
  * For this app i all services will be classified as these services
@@ -60,6 +61,12 @@ const logger = winston.createLogger({
       filename: "logs/user-service.log",
       // The transport format only needs the filter. Timestamp and JSON are inherited.
       format: winston.format.combine(serviceFilter(Service.USER)),
+    }),
+    new LokiTransport({
+      host: "http://127.0.0.1:3100",
+      labels: { app: "databridge" },
+      format: winston.format.json(),
+      onConnectionError: (err) => console.error("Loki error:", err),
     }),
     new winston.transports.File({
       filename: "logs/system-service.log",
