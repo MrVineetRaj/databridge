@@ -2,6 +2,8 @@ import { envConf } from "./lib/envConf";
 import express, { Application, Request, Response } from "express";
 import * as trpcExpress from "@trpc/server/adapters/express";
 import cors from "cors";
+import responseTime from "response-time";
+import client from "prom-client";
 import { healthRoutes } from "./routes/health";
 import cookieParser from "cookie-parser";
 import session from "express-session";
@@ -35,6 +37,33 @@ export function createExpressApp(): Application {
         "RateLimit-Reset",
         "RateLimit-Limit",
       ],
+    })
+  );
+
+  const reqResTime = new client.Histogram({
+    name: "http_express_req_res_time",
+    help: "This tells how much time is taken by req and res",
+    labelNames: ["method", "route", "status_code"],
+    buckets: [1, 50, 100, 200, 400, 500, 800, 1000, 2000],
+  });
+
+  const totalReqCounter = new client.Counter({
+    name: "total_req",
+    help: "Tells total number of request",
+  });
+
+  app.use(
+    responseTime((req: Request, res: Response, time) => {
+      if(req.originalUrl != "/api/v1/health/metrics"){
+        totalReqCounter.inc();
+      }
+      reqResTime
+        .labels({
+          method: req.method,
+          route: req.originalUrl,
+          status_code: res.statusCode,
+        })
+        .observe(time);
     })
   );
 
