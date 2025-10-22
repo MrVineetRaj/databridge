@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -16,6 +16,9 @@ export const TableContent = ({
     [key: string]: string;
   }[];
 }) => {
+  useEffect(() => {
+    console.log(data);
+  }, [data]);
   return (
     <Table
       className=""

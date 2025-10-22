@@ -46,9 +46,21 @@ export function registerRoutes() {
           tableName: z.string(),
           page: z.number(),
           limit: z.number(),
+          projectId: z.string(),
         })
       )
       .query(TRPCAsyncHandler(actions.getTableContent.bind(actions))),
+    deleteItemFromDatabase: protectedProcedure
+      .input(
+        z.object({
+          projectId: z.string(),
+          dbName: z.string(),
+          primaryKey: z.string(),
+          primaryKeyValue: z.string(),
+          tableName: z.string(),
+        })
+      )
+      .mutation(TRPCAsyncHandler(actions.deleteItemFromDatabase.bind(actions))),
   });
 
   return projectRoutes;

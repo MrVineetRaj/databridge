@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { Pool, Client } from "pg";
 import format from "pg-format";
 import { envConf } from "../lib/envConf";
+import logger from "../lib/logger";
 
 export const adminPool = new Pool({
   host: envConf.DATABASE_HOST,
@@ -106,57 +107,112 @@ export class PostgresServices {
     }
   }
 
+  //   async getTablesForDatabase({
+  //     dbUserName,
+  //     dbName,
+  //   }: {
+  //     dbUserName: string;
+  //     dbName: string;
+  //   }): Promise<string[]> {
+  //     // We will list all tables owned by this dbUserName inside dbName
+  //     const query = format(
+  //       `
+  //   SELECT n.nspname AS schema_name,
+  //          c.relname AS table_name
+  //   FROM pg_class c
+  //   JOIN pg_namespace n ON n.oid = c.relnamespace
+  //   JOIN pg_roles r ON r.oid = c.relowner
+  //   WHERE c.relkind = 'r'
+  //     AND n.nspname NOT IN ('pg_catalog', 'information_schema');
+  // `,
+  //       dbUserName
+  //     );
+
+  //     try {
+  //       // Ensure you're connected to the target database (dbName)
+  //       // const client = await this.pool.connect();
+  //       await this.pool.query(`SET search_path TO ${dbName};`);
+
+  //       const result = await this.pool.query(query);
+
+  //       // Map to array of strings like ['users', 'orders', 'transactions']
+  //       return result.rows
+  //         .map((row) => `${row.table_name}`)
+  //         .filter((it) => !it.startsWith("_"));
+  //     } catch (error) {
+  //       console.error(
+  //         `Failed to fetch tables for ${dbUserName} in ${dbName}:`,
+  //         (error as Error).message
+  //       );
+  //       throw new Error("Could not fetch tables.");
+  //     }
+  //   }
+
   async getTablesForDatabase({
     dbUserName,
     dbName,
+    dbPassword,
   }: {
     dbUserName: string;
     dbName: string;
-  }): Promise<string[]> {
-    // We will list all tables owned by this dbUserName inside dbName
-    const query = format(
-      `
-  SELECT n.nspname AS schema_name,
-         c.relname AS table_name
-  FROM pg_class c
-  JOIN pg_namespace n ON n.oid = c.relnamespace
-  JOIN pg_roles r ON r.oid = c.relowner
-  WHERE c.relkind = 'r'
-    AND n.nspname NOT IN ('pg_catalog', 'information_schema');
-`,
-      dbUserName
-    );
+    dbPassword: string;
+  }): Promise<{ tableName: string; primaryKey: string }[]> {
+    const query = `
+SELECT
+  c.relname AS table_name,
+  a.attname AS primary_key_column
+FROM pg_constraint con
+JOIN pg_class c ON c.oid = con.conrelid
+JOIN pg_namespace n ON n.oid = c.relnamespace
+JOIN pg_attribute a ON a.attnum = ANY(con.conkey) AND a.attrelid = c.oid
+WHERE con.contype = 'p'  -- 'p' = PRIMARY KEY
+  AND n.nspname NOT IN ('pg_catalog', 'information_schema');
+`;
 
     try {
-      // Ensure you're connected to the target database (dbName)
-      // const client = await this.pool.connect();
-      await this.pool.query(`SET search_path TO ${dbName};`);
+      // Must connect to the right database
+      const client = new Pool({
+        user: dbUserName,
+        host: "localhost",
+        database: dbName,
+        password: dbPassword, // or inject from env
+        port: 5432,
+      });
 
-      const result = await this.pool.query(query);
+      // const result = await client.query(query, [dbUserName]);
+      const result = await client.query(query);
+      console.log("\n\n\nresult is here", result);
+      await client.end();
 
-      // Map to array of strings like ['users', 'orders', 'transactions']
-      return result.rows
-        .map((row) => `${row.table_name}`)
-        .filter((it) => !it.startsWith("_"));
+      return result.rows.map((row) => {
+        return {
+          tableName: row.table_name,
+          primaryKey: row.primary_key_column,
+        };
+      });
+      // return ["hello"];
     } catch (error) {
-      console.error(
+      logger.error(
         `Failed to fetch tables for ${dbUserName} in ${dbName}:`,
         (error as Error).message
       );
       throw new Error("Could not fetch tables.");
     }
   }
-
   async getTableContentPaginated({
     dbName,
     tableName,
     page = 1,
     limit = 20,
+    dbUserName,
+    dbPassword,
   }: {
     dbName: string;
     tableName: string;
     page?: number;
     limit?: number;
+    dbUserName: string;
+    dbPassword: string;
   }) {
     const offset = (page - 1) * limit;
     let schema = "public";
@@ -186,10 +242,19 @@ export class PostgresServices {
         ? `SELECT COUNT(*) AS total FROM ${schema}.${pureTable};`
         : format(`SELECT COUNT(*) AS total FROM %I.%I;`, schema, pureTable);
 
+      const client = new Pool({
+        user: dbUserName,
+        host: "localhost",
+        database: dbName,
+        password: dbPassword, // or inject from env
+        port: 5432,
+      });
       const [dataResult, countResult] = await Promise.all([
-        this.pool.query(safeQuery),
-        this.pool.query(safeCountQuery),
+        client.query(safeQuery),
+        client.query(safeCountQuery),
       ]);
+
+      client.end();
 
       const total = parseInt(countResult.rows[0].total, 10);
       const totalPages = Math.ceil(total / limit);
@@ -209,6 +274,58 @@ export class PostgresServices {
         error
       );
       throw new Error("Could not fetch table data.");
+    }
+  }
+
+  async deleteItemFromDatabase({
+    dbName,
+    dbPassword,
+    dbUserName,
+    primaryKey,
+    primaryKeyValue,
+    tableName,
+  }: {
+    dbUserName: string;
+    dbName: string;
+    dbPassword: string;
+    tableName: string;
+    primaryKey: string;
+    primaryKeyValue: string;
+  }) {
+    if (!/^[a-zA-Z0-9_]+$/.test(tableName))
+      throw new Error("Invalid table name");
+    if (!/^[a-zA-Z0-9_]+$/.test(primaryKey))
+      throw new Error("Invalid primary key column name");
+
+    // ✅ Use parameterized query for safety
+    const query = `DELETE FROM public."${tableName}" WHERE ${primaryKey} = '${primaryKeyValue}'`;
+
+
+    console.log("Executing:", query, "with value:", primaryKeyValue);
+
+    try {
+      // Must connect to the right database
+      const client = new Pool({
+        user: dbUserName,
+        host: "localhost",
+        database: dbName,
+        password: dbPassword, // or inject from env
+        port: 5432,
+      });
+
+      // const result = await client.query(query, [dbUserName]);
+      const result = await client.query(query);
+      console.log("\n\n\nresult is here", result);
+      await client.end();
+
+      return "Deleted ";
+      // return ["hello"];
+    } catch (error) {
+      logger.error(
+        `Failed to fetch tables for ${dbUserName} in ${dbName}:`,
+        error
+      );
+      throw new Error("Could not fetch tables.");
     }
   }
 }
