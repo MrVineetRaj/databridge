@@ -71,7 +71,6 @@ export class Actions {
     const dbNames = await pgService.getDatabasesForUser({
       platformUsername: project?.dbUser!,
     });
-    
 
     const result = {
       project,
@@ -127,6 +126,7 @@ export class Actions {
     const tableNames = await pgService.getTablesForDatabase({
       dbUserName: project?.dbUser!,
       dbName: input.dbName,
+      dbPassword: project?.dbPassword!,
     });
 
     const result = tableNames;
@@ -138,12 +138,57 @@ export class Actions {
     });
   }
 
-  async getTableContent(
-    input: { dbName: string; tableName: string; page?: number; limit?: number },
+  async deleteItemFromDatabase(
+    input: {
+      projectId: string;
+      dbName: string;
+      primaryKey: string;
+      primaryKeyValue: string;
+      tableName: string;
+    },
     ctx: AuthedContext
   ) {
-    const { dbName, tableName } = input;
+    const { projectId, dbName, primaryKey, primaryKeyValue, tableName } = input;
 
+    const projectDetails = await db.project.findUnique({
+      where: {
+        id: projectId,
+      },
+    });
+
+    const pgService = new PostgresServices(adminPool);
+    const result = await pgService.deleteItemFromDatabase({
+      dbName,
+      dbPassword: projectDetails?.dbPassword!,
+      dbUserName: projectDetails?.dbUser!,
+      primaryKey,
+      primaryKeyValue,
+      tableName,
+    });
+    return new ApiResponse<typeof result>({
+      message: "Project fetched successfully",
+      statusCode: 200,
+      data: result,
+    });
+  }
+
+  async getTableContent(
+    input: {
+      dbName: string;
+      tableName: string;
+      page?: number;
+      limit?: number;
+      projectId: string;
+    },
+    ctx: AuthedContext
+  ) {
+    const { dbName, tableName, projectId } = input;
+
+    const project = await db.project.findUnique({
+      where: {
+        id: projectId,
+      },
+    });
     if (tableName.includes("XXXXX")) {
       const result = {
         data: [],
@@ -166,6 +211,8 @@ export class Actions {
       tableName,
       page: input?.page ?? 1,
       limit: input?.limit ?? 20,
+      dbPassword: project?.dbPassword!,
+      dbUserName: project?.dbUser!,
     });
 
     const result = tableContent;
