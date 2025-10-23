@@ -282,7 +282,7 @@ WHERE con.contype = 'p'  -- 'p' = PRIMARY KEY
     dbPassword,
     dbUserName,
     primaryKey,
-    primaryKeyValue,
+    primaryKeyValues,
     tableName,
   }: {
     dbUserName: string;
@@ -290,7 +290,7 @@ WHERE con.contype = 'p'  -- 'p' = PRIMARY KEY
     dbPassword: string;
     tableName: string;
     primaryKey: string;
-    primaryKeyValue: string;
+    primaryKeyValues: string[];
   }) {
     if (!/^[a-zA-Z0-9_]+$/.test(tableName))
       throw new Error("Invalid table name");
@@ -298,10 +298,11 @@ WHERE con.contype = 'p'  -- 'p' = PRIMARY KEY
       throw new Error("Invalid primary key column name");
 
     // ✅ Use parameterized query for safety
-    const query = `DELETE FROM public."${tableName}" WHERE ${primaryKey} = '${primaryKeyValue}'`;
+    const query = `DELETE FROM public."${tableName}" WHERE ${primaryKey} in (${primaryKeyValues
+      .map((it) => `'${it}'`)
+      .join(", ")})`;
 
-
-    console.log("Executing:", query, "with value:", primaryKeyValue);
+    console.log("Executing:", query, "with value:", primaryKeyValues);
 
     try {
       // Must connect to the right database
@@ -318,7 +319,84 @@ WHERE con.contype = 'p'  -- 'p' = PRIMARY KEY
       console.log("\n\n\nresult is here", result);
       await client.end();
 
-      return "Deleted ";
+      return true;
+      // return ["hello"];
+    } catch (error) {
+      logger.error(
+        `Failed to fetch tables for ${dbUserName} in ${dbName}:`,
+        error
+      );
+      throw new Error("Could not fetch tables.");
+    }
+  }
+
+  async searchItemsUsingSqlQuery({
+    dbName,
+    dbPassword,
+    dbUserName,
+    sqlQuery,
+  }: {
+    dbUserName: string;
+    dbName: string;
+    dbPassword: string;
+    sqlQuery: string;
+  }) {
+    console.log("Executing:", sqlQuery);
+
+    try {
+      // Must connect to the right database
+      const client = new Pool({
+        user: dbUserName,
+        host: "localhost",
+        database: dbName,
+        password: dbPassword, // or inject from env
+        port: 5432,
+      });
+
+      // const result = await client.query(query, [dbUserName]);
+      const result = await client.query(sqlQuery);
+      console.log("\n\n\nresult is here", result);
+      await client.end();
+
+      return result.rows;
+      // return ["hello"];
+    } catch (error) {
+      logger.error(
+        `Failed to fetch tables for ${dbUserName} in ${dbName}:`,
+        error
+      );
+      throw new Error("Could not fetch tables.");
+    }
+  }
+  async updateMultipleRows({
+    dbName,
+    dbPassword,
+    dbUserName,
+    sqlQuery,
+  }: {
+    dbUserName: string;
+    dbName: string;
+    dbPassword: string;
+    sqlQuery: string;
+  }) {
+    console.log("Executing:", sqlQuery);
+
+    try {
+      // Must connect to the right database
+      const client = new Pool({
+        user: dbUserName,
+        host: "localhost",
+        database: dbName,
+        password: dbPassword, // or inject from env
+        port: 5432,
+      });
+
+      // const result = await client.query(query, [dbUserName]);
+      const result = await client.query(sqlQuery);
+      console.log("\n\n\nresult is here", result);
+      await client.end();
+
+      return result.rows;
       // return ["hello"];
     } catch (error) {
       logger.error(

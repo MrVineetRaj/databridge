@@ -56,11 +56,45 @@ export function registerRoutes() {
           projectId: z.string(),
           dbName: z.string(),
           primaryKey: z.string(),
-          primaryKeyValue: z.string(),
+          primaryKeyValues: z.array(z.string()),
           tableName: z.string(),
         })
       )
       .mutation(TRPCAsyncHandler(actions.deleteItemFromDatabase.bind(actions))),
+
+    searchItemsUsingSqlQuery: protectedProcedure
+      .input(
+        z.object({
+          dbName: z.string(),
+          tableName: z.string(),
+          projectId: z.string(),
+          sqlQueryObj: z.array(
+            z.object({
+              field: z.string(),
+              operator: z.string(),
+              value: z.string(),
+              queryConnector: z.string(),
+            })
+          ),
+        })
+      )
+      .mutation(
+        TRPCAsyncHandler(actions.searchItemsUsingSqlQuery.bind(actions))
+      ),
+    updateMultipleRows: protectedProcedure
+      .input(
+        z.object({
+          dbName: z.string(),
+          tableName: z.string(),
+          projectId: z.string(),
+          primaryKey: z.string(),
+          sqlQueryObj: z.record(
+            z.string(), // primary key
+            z.record(z.string(), z.string()) // inner object: fieldName -> value
+          ),
+        })
+      )
+      .mutation(TRPCAsyncHandler(actions.updateMultipleRows.bind(actions))),
   });
 
   return projectRoutes;

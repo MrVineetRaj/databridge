@@ -93,7 +93,7 @@ const ConsoleLayout = () => {
                       to={`/console/${id}`}
                       className={cn(
                         "w-full bg-background p-4 rounded-md outline btn",
-                        location.pathname === `/console/${id}`
+                        location.pathname.includes(`/console/${id}`)
                           ? "bg-primary/50 text-white"
                           : "bg-background"
                       )}

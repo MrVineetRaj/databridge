@@ -113,6 +113,17 @@ export class Actions {
     input: { projectId: string; dbName: string },
     ctx: AuthedContext
   ) {
+    const { dbName } = input;
+    if (dbName === "XXXXX") {
+      return new ApiResponse<typeof result>({
+        message: "Table names fetched",
+        statusCode: 200,
+        data: [] as {
+          tableName: string;
+          primaryKey: string;
+        }[],
+      });
+    }
     const { user } = ctx;
 
     const project = await db.project.findUnique({
@@ -132,7 +143,7 @@ export class Actions {
     const result = tableNames;
 
     return new ApiResponse<typeof result>({
-      message: "Project fetched successfully",
+      message: "Table names fetched",
       statusCode: 200,
       data: result,
     });
@@ -143,12 +154,13 @@ export class Actions {
       projectId: string;
       dbName: string;
       primaryKey: string;
-      primaryKeyValue: string;
+      primaryKeyValues: string[];
       tableName: string;
     },
     ctx: AuthedContext
   ) {
-    const { projectId, dbName, primaryKey, primaryKeyValue, tableName } = input;
+    const { projectId, dbName, primaryKey, primaryKeyValues, tableName } =
+      input;
 
     const projectDetails = await db.project.findUnique({
       where: {
@@ -162,11 +174,11 @@ export class Actions {
       dbPassword: projectDetails?.dbPassword!,
       dbUserName: projectDetails?.dbUser!,
       primaryKey,
-      primaryKeyValue,
+      primaryKeyValues,
       tableName,
     });
     return new ApiResponse<typeof result>({
-      message: "Project fetched successfully",
+      message: "Items deleted successfully",
       statusCode: 200,
       data: result,
     });
@@ -189,7 +201,7 @@ export class Actions {
         id: projectId,
       },
     });
-    if (tableName.includes("XXXXX")) {
+    if (tableName.includes("XXXXX") || dbName === "XXXXX") {
       const result = {
         data: [],
         pagination: {
@@ -200,7 +212,7 @@ export class Actions {
         },
       };
       return new ApiResponse<typeof result>({
-        message: "Project fetched successfully",
+        message: `Table content fetched for ${tableName} from ${dbName}`,
         statusCode: 200,
         data: result,
       });
@@ -217,7 +229,153 @@ export class Actions {
 
     const result = tableContent;
     return new ApiResponse<typeof result>({
-      message: "Project fetched successfully",
+      message: `Table content fetched for ${tableName} from ${dbName}`,
+      statusCode: 200,
+      data: result,
+    });
+  }
+  async searchItemsUsingSqlQuery(
+    input: {
+      dbName: string;
+      tableName: string;
+      projectId: string;
+      sqlQueryObj: {
+        field: string;
+        operator: string;
+        value: string;
+        queryConnector: string;
+      }[];
+    },
+    ctx: AuthedContext
+  ) {
+    const { dbName, tableName, projectId, sqlQueryObj } = input;
+
+    // console.log(sqlQueryObj);
+    const project = await db.project.findUnique({
+      where: {
+        id: projectId,
+      },
+    });
+    if (tableName.includes("XXXXX") || dbName === "XXXXX") {
+      const result: any[] = [];
+      return new ApiResponse<typeof result>({
+        message: `Table content fetched for ${tableName} from ${dbName}`,
+        statusCode: 200,
+        data: result,
+      });
+    }
+
+    let sqlQuery = `select * from "${tableName}" where `;
+
+    sqlQueryObj.forEach((queryObj) => {
+      const { field, operator, queryConnector, value } = queryObj;
+
+      sqlQuery += ` ${field} ${operator} '${value}' ${queryConnector}`;
+    });
+
+    console.log(sqlQuery);
+    const pgService = new PostgresServices(adminPool);
+    const result = await pgService.searchItemsUsingSqlQuery({
+      dbName,
+      sqlQuery,
+      dbPassword: project?.dbPassword!,
+      dbUserName: project?.dbUser!,
+    });
+
+    return new ApiResponse<typeof result>({
+      message: `Table content fetched for ${tableName} from ${dbName}`,
+      statusCode: 200,
+      data: result,
+    });
+  }
+  async updateMultipleRows(
+    input: {
+      dbName: string;
+      tableName: string;
+      projectId: string;
+      primaryKey: string;
+      sqlQueryObj: { [primaryKey: string]: { [field: string]: string } };
+    },
+    ctx: AuthedContext
+  ) {
+    const { dbName, tableName, projectId, primaryKey, sqlQueryObj } = input;
+
+    // console.log(sqlQueryObj);
+    const project = await db.project.findUnique({
+      where: {
+        id: projectId,
+      },
+    });
+    if (tableName.includes("XXXXX") || dbName === "XXXXX") {
+      const result: any[] = [];
+      return new ApiResponse<typeof result>({
+        message: `Table content fetched for ${tableName} from ${dbName}`,
+        statusCode: 200,
+        data: result,
+      });
+    }
+
+    const primaryKeyValues = Object.keys(sqlQueryObj);
+    const dataToBeUpdated = Object.values(sqlQueryObj);
+
+    let cols: string[] = [];
+
+    for (let i = 0; i < dataToBeUpdated.length; i++) {
+      const currentItem = dataToBeUpdated[i] ?? {};
+      if (currentItem) {
+        Object.keys(currentItem).forEach((col) => {
+          if (!cols.includes(col)) {
+            cols.push(col);
+          }
+        });
+      }
+    }
+
+    if (!dataToBeUpdated || dataToBeUpdated?.length <= 0) {
+      return;
+    }
+
+    let sqlQuery = `
+WITH updated_data (${primaryKey}, ${cols?.join(", ")}) AS (
+  VALUES
+    ${primaryKeyValues
+      ?.map((primaryKeyValue, idx) => {
+        const currentData = dataToBeUpdated[idx];
+        return `('${primaryKeyValue}'${cols
+          ?.map((col) => {
+            const value = currentData?.[col];
+            return `, '${value || "NULL"}'`;
+          })
+          .join("")})`;
+      })
+      .join(",    ")}
+)
+UPDATE ${tableName} AS t
+SET
+  ${cols
+    ?.map((col) => {
+      return `${col} = COALESCE(u.${col}, t.${col})`;
+    })
+    .join(",  ")}
+FROM updated_data AS u
+WHERE t.${primaryKey} = u.${primaryKey};
+`;
+
+    console.log(sqlQuery);
+
+    const pgService = new PostgresServices(adminPool);
+    const result = await pgService.updateMultipleRows({
+      dbName,
+      sqlQuery,
+      dbPassword: project?.dbPassword!,
+      dbUserName: project?.dbUser!,
+    });
+
+    // const result = ""
+    console.log(result)
+
+    return new ApiResponse<typeof result>({
+      message: `Table content updated for ${tableName} from ${dbName}`,
       statusCode: 200,
       data: result,
     });
