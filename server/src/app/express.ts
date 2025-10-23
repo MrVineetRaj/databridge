@@ -57,10 +57,11 @@ export function createExpressApp(): Application {
       if(req.originalUrl != "/api/v1/health/metrics"){
         totalReqCounter.inc();
       }
+      const route = req.originalUrl.split("?")[0] as string
       reqResTime
         .labels({
           method: req.method,
-          route: req.originalUrl,
+          route,
           status_code: res.statusCode,
         })
         .observe(time);

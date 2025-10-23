@@ -14,29 +14,91 @@ const TablePage = () => {
   const queryClient = useQueryClient();
   const [selectedDatabase, setSelectedDatabase] = useState<number>(0);
   const [selectedTable, setSelectedTable] = useState<number>(0);
-
-  const { data: databases, isPending: loadingDatabase } = useQuery(
-    trpc.projectRoutes.getDatabasesInsideProject.queryOptions({
-      projectId: project_id as string,
-    })
-  );
+  const [tableContentToBeDisplayed, setTableContentToBeDisplayed] = useState<
+    { [key: string]: string }[]
+  >([]);
 
   const deleteItemFromTable = useMutation(
     trpc.projectRoutes.deleteItemFromDatabase.mutationOptions({
       onSuccess: (res) => {
         console.log(res);
-        toast.success(JSON.stringify(res), {
-          id: "delete-message",
-          duration: 2000,
+        toast.success(res.message, {
+          id: "table-query",
+          duration: 3000,
         });
+        // queryClient.invalidateQueries(
+        //   trpc.projectRoutes.getTableContent.queryOptions({
+        //     dbName: databases?.data
+        //       ? databases?.data[selectedDatabase]
+        //       : "XXXXX",
+        //     tableName:
+        //       "public." +
+        //       (tables?.data ? tables?.data[selectedTable]?.tableName : "XXXXX"),
+        //     page: 1,
+        //     limit: 20,
+        //     projectId: project_id as string,
+        //   })
+        // );
       },
       onError: (err) => {
         console.log(err);
         toast.error(JSON.stringify(err.message), {
-          id: "delete-message",
-          duration: 2000,
+          id: "table-query",
+          duration: 3000,
         });
       },
+    })
+  );
+  const runSqlQuery = useMutation(
+    trpc.projectRoutes.searchItemsUsingSqlQuery.mutationOptions({
+      onSuccess: (res) => {
+        toast.success(res.message, {
+          duration: 3000,
+          id: "table-query",
+        });
+        setTableContentToBeDisplayed(res?.data ?? []);
+      },
+      onError: (err) => {
+        toast.error(err.message || "Failed to fetch sql query result", {
+          duration: 3000,
+          id: "table-query",
+        });
+      },
+    })
+  );
+
+  const saveChanges = useMutation(
+    trpc.projectRoutes.updateMultipleRows.mutationOptions({
+      onSuccess: (res) => {
+        toast.success(res?.message, {
+          duration: 3000,
+          id: "table-query",
+        });
+        queryClient.invalidateQueries(
+          trpc.projectRoutes.getTableContent.queryOptions({
+            dbName: databases?.data
+              ? databases?.data[selectedDatabase]
+              : "XXXXX",
+            tableName:
+              "public." +
+              (tables?.data ? tables?.data[selectedTable]?.tableName : "XXXXX"),
+            page: 1,
+            limit: 20,
+            projectId: project_id as string,
+          })
+        );
+      },
+      onError: (err) => {
+        toast.error(err.message || "Failed to fetch sql query result", {
+          duration: 3000,
+          id: "table-query",
+        });
+      },
+    })
+  );
+  const { data: databases, isPending: loadingDatabase } = useQuery(
+    trpc.projectRoutes.getDatabasesInsideProject.queryOptions({
+      projectId: project_id as string,
     })
   );
 
@@ -64,6 +126,11 @@ const TablePage = () => {
     setSelectedTable(0); // Reset table selection when database changes
   }, [selectedDatabase]);
 
+  useEffect(() => {
+    if (tableContent?.data?.data)
+      setTableContentToBeDisplayed(tableContent?.data?.data ?? []);
+  }, [tableContent]);
+
   if (!databases?.data) {
     return "Loading databases";
   }
@@ -89,8 +156,13 @@ const TablePage = () => {
         </TabsList>
 
         <Label className="mt-4">Tables</Label>
-        {databases?.data?.map((db: string) => {
-          if (!tables?.data) return null;
+        {databases?.data?.map((db: string, indexNum) => {
+          if (!tables?.data || tables?.data?.length <= 0)
+            return (
+              <p className="italic text-foreground-muted" key={indexNum}>
+                No tables found in this database
+              </p>
+            );
           return (
             <TabsContent value={db} key={db}>
               {tables?.data && (
@@ -115,7 +187,7 @@ const TablePage = () => {
                       }
                     )}
                   </TabsList>
-                  <p
+                  {/* <p
                     onClick={() => {
                       toast.loading("Deleting item", {
                         id: "delete-message",
@@ -130,12 +202,63 @@ const TablePage = () => {
                     }}
                   >
                     Delete
-                  </p>
+                  </p> */}
 
                   {loadingTableContent ? (
                     <p>Loading Content</p>
-                  ) : tableContent?.data?.data && tableContent?.data?.data.length > 0 ? (
-                    <TableContent data={tableContent?.data?.data} />
+                  ) : tableContent?.data?.data &&
+                    tableContent?.data?.data.length > 0 ? (
+                    <TableContent
+                      handleDeleteQuery={({ primaryKeyValues }) => {
+                        if (
+                          !databases.data ||
+                          !tables.data ||
+                          tables.data.length <= 0 ||
+                          databases.data.length <= 0
+                        ) {
+                          toast.warning("Refresh the page please", {
+                            id: "table-query",
+                            duration: 3000,
+                          });
+                          return;
+                        }
+
+                        toast.loading("Deleting selected rows", {
+                          id: "table-query",
+                        });
+                        deleteItemFromTable.mutateAsync({
+                          tableName: tables.data[selectedTable].tableName,
+                          primaryKey: tables.data[selectedTable].primaryKey,
+                          primaryKeyValues,
+                          dbName: databases.data[selectedDatabase],
+                          projectId: project_id as string,
+                        });
+                      }}
+                      handleSaveChanges={(val) => {
+                        saveChanges.mutateAsync({
+                          dbName: databases.data![selectedDatabase],
+                          primaryKey: tables?.data![selectedTable].primaryKey,
+                          tableName: tables?.data![selectedTable].tableName,
+                          projectId: project_id as string,
+                          sqlQueryObj: val,
+                        });
+                      }}
+                      data={tableContentToBeDisplayed}
+                      primaryKey={tables.data[selectedTable].primaryKey}
+                      handleRunQuery={(val) => {
+                        console.log("val", val);
+                        toast.loading("Running SQL Query", {
+                          id: "table-query",
+                        });
+                        runSqlQuery.mutateAsync({
+                          dbName: databases.data![selectedDatabase],
+
+                          tableName: tables?.data![selectedTable].tableName,
+                          projectId: project_id as string,
+                          sqlQueryObj: val,
+                        });
+                      }}
+                    />
                   ) : (
                     "No content"
                   )}
