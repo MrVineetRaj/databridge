@@ -5,6 +5,7 @@ import { db } from "../../lib/db";
 import { AuthedContext, Context } from "../../trpc";
 import { adminPool, PostgresServices } from "../../services/pg";
 import { envConf } from "../../lib/envConf";
+import format from "pg-format";
 
 export class Actions {
   async newProject(
@@ -256,21 +257,60 @@ export class Actions {
         id: projectId,
       },
     });
-    if (tableName.includes("XXXXX") || dbName === "XXXXX") {
+
+    if (sqlQueryObj.length >= 50) {
+      throw new Error(`Very large sql query`);
+      return;
+    }
+
+    let isInvalidSqlQuery = sqlQueryObj.some(
+      (queryObj) =>
+        queryObj.field == "" || queryObj.operator == "" || queryObj.value == ""
+    );
+
+    if (!isInvalidSqlQuery) {
+      isInvalidSqlQuery = sqlQueryObj
+        .slice(0, sqlQueryObj.length - 1)
+        .some((queryObj) => queryObj.queryConnector === "");
+    }
+
+    if (
+      tableName.includes("XXXXX") ||
+      dbName === "XXXXX" ||
+      isInvalidSqlQuery
+    ) {
       const result: any[] = [];
       return new ApiResponse<typeof result>({
-        message: `Table content fetched for ${tableName} from ${dbName}`,
-        statusCode: 200,
+        message: `Invalid data for sql query sent`,
+        statusCode: 400,
         data: result,
       });
     }
 
-    let sqlQuery = `select * from "${tableName}" where `;
+    let sqlQuery = format(`select * from "%I" where `, tableName);
 
-    sqlQueryObj.forEach((queryObj) => {
+    sqlQueryObj.forEach((queryObj, index) => {
       const { field, operator, queryConnector, value } = queryObj;
+      const isLast = index === sqlQueryObj.length - 1;
 
-      sqlQuery += ` ${field} ${operator} '${value}' ${queryConnector}`;
+      // Validate operator
+      const validOps = ["=", "<", "<=", ">", ">=", "!="];
+      if (!validOps.includes(operator)) {
+        throw new Error(`Invalid operator: ${operator}`);
+      }
+
+      const validConnectors = ["", "AND", "OR"];
+      if (!validConnectors.includes(queryConnector)) {
+        throw new Error(`Invalid query connector: ${queryConnector}`);
+      }
+
+      // Append condition
+      sqlQuery += format(` %I ${operator} %L`, field, value);
+
+      // Append connector only if not last
+      if (!isLast && queryConnector) {
+        sqlQuery += ` ${queryConnector}`;
+      }
     });
 
     console.log(sqlQuery);
@@ -282,10 +322,10 @@ export class Actions {
       dbUserName: project?.dbUser!,
     });
 
-    return new ApiResponse<typeof result>({
-      message: `Table content fetched for ${tableName} from ${dbName}`,
+    return new ApiResponse<typeof result.data>({
+      message: `Table content fetched for ${tableName} from ${dbName}, ${result?.message}`,
       statusCode: 200,
-      data: result,
+      data: result.data,
     });
   }
   async updateMultipleRows(
@@ -318,50 +358,48 @@ export class Actions {
     const primaryKeyValues = Object.keys(sqlQueryObj);
     const dataToBeUpdated = Object.values(sqlQueryObj);
 
-    let cols: string[] = [];
+    if (!dataToBeUpdated.length) return;
 
-    for (let i = 0; i < dataToBeUpdated.length; i++) {
-      const currentItem = dataToBeUpdated[i] ?? {};
-      if (currentItem) {
-        Object.keys(currentItem).forEach((col) => {
-          if (!cols.includes(col)) {
-            cols.push(col);
-          }
-        });
-      }
-    }
+    // Collect all columns to update
+    const cols = [
+      ...new Set(dataToBeUpdated.flatMap((item) => Object.keys(item || {}))),
+    ];
 
-    if (!dataToBeUpdated || dataToBeUpdated?.length <= 0) {
-      return;
-    }
+    // Build VALUES safely
+    const valuesArray = primaryKeyValues.map((pk, idx) => {
+      const currentData = dataToBeUpdated[idx] as {
+        [field: string]: string;
+      };
+      return [
+        pk,
+        ...cols.map((col) =>
+          currentData[col] === undefined || currentData[col] === null
+            ? null
+            : currentData[col]
+        ),
+      ];
+    });
 
-    let sqlQuery = `
-WITH updated_data (${primaryKey}, ${cols?.join(", ")}) AS (
-  VALUES
-    ${primaryKeyValues
-      ?.map((primaryKeyValue, idx) => {
-        const currentData = dataToBeUpdated[idx];
-        return `('${primaryKeyValue}'${cols
-          ?.map((col) => {
-            const value = currentData?.[col];
-            return `, '${value || "NULL"}'`;
-          })
-          .join("")})`;
-      })
-      .join(",    ")}
+    const sqlQuery = format(
+      `
+WITH updated_data (%I, %s) AS (
+  VALUES %L
 )
-UPDATE ${tableName} AS t
-SET
-  ${cols
-    ?.map((col) => {
-      return `${col} = COALESCE(u.${col}, t.${col})`;
-    })
-    .join(",  ")}
+UPDATE %I AS t
+SET %s
 FROM updated_data AS u
-WHERE t.${primaryKey} = u.${primaryKey};
-`;
-
-    console.log(sqlQuery);
+WHERE t.%I = u.%I;
+  `,
+      primaryKey,
+      cols.map((c) => format.ident(c)).join(", "),
+      valuesArray,
+      tableName,
+      cols
+        .map((col) => format("%I = COALESCE(u.%I, t.%I)", col, col, col))
+        .join(", "),
+      primaryKey,
+      primaryKey
+    );
 
     const pgService = new PostgresServices(adminPool);
     const result = await pgService.updateMultipleRows({
@@ -371,13 +409,10 @@ WHERE t.${primaryKey} = u.${primaryKey};
       dbUserName: project?.dbUser!,
     });
 
-    // const result = ""
-    console.log(result)
-
-    return new ApiResponse<typeof result>({
-      message: `Table content updated for ${tableName} from ${dbName}`,
+    return new ApiResponse<typeof result.data>({
+      message: `${result?.message}, Table content updated for ${tableName} from ${dbName}`,
       statusCode: 200,
-      data: result,
+      data: result.data,
     });
   }
 }

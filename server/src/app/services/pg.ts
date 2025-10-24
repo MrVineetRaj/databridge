@@ -12,6 +12,28 @@ export const adminPool = new Pool({
   database: "postgres", // Connect to the default 'postgres' db to run CREATE DATABASE
 });
 
+class PGClassResults<T = null> {
+  message: string;
+  success: boolean;
+  data: T;
+  constructor({
+    message,
+    success,
+    data,
+  }: {
+    message: string;
+    success: boolean;
+    data?: T;
+  }) {
+    this.message = message;
+    this.success = success;
+    if (data) {
+      this.data = data;
+    } else {
+      this.data = null as T;
+    }
+  }
+}
 export class PostgresServices {
   private pool: Pool;
 
@@ -181,7 +203,7 @@ WHERE con.contype = 'p'  -- 'p' = PRIMARY KEY
 
       // const result = await client.query(query, [dbUserName]);
       const result = await client.query(query);
-      console.log("\n\n\nresult is here", result);
+
       await client.end();
 
       return result.rows.map((row) => {
@@ -297,10 +319,16 @@ WHERE con.contype = 'p'  -- 'p' = PRIMARY KEY
     if (!/^[a-zA-Z0-9_]+$/.test(primaryKey))
       throw new Error("Invalid primary key column name");
 
-    // ✅ Use parameterized query for safety
-    const query = `DELETE FROM public."${tableName}" WHERE ${primaryKey} in (${primaryKeyValues
-      .map((it) => `'${it}'`)
-      .join(", ")})`;
+    const placeholders = primaryKeyValues
+      .map((_, index) => `$${index + 1}`)
+      .join(", ");
+
+    const query = format(
+      `DELETE FROM %I.%I WHERE %I IN (${placeholders})`,
+      "public",
+      tableName,
+      primaryKey
+    );
 
     console.log("Executing:", query, "with value:", primaryKeyValues);
 
@@ -314,13 +342,14 @@ WHERE con.contype = 'p'  -- 'p' = PRIMARY KEY
         port: 5432,
       });
 
-      // const result = await client.query(query, [dbUserName]);
-      const result = await client.query(query);
-      console.log("\n\n\nresult is here", result);
+      const result = await client.query(query, primaryKeyValues);
+
       await client.end();
 
-      return true;
-      // return ["hello"];
+      return new PGClassResults({
+        success: true,
+        message: `Affected rows ${result.rowCount}`,
+      });
     } catch (error) {
       logger.error(
         `Failed to fetch tables for ${dbUserName} in ${dbName}:`,
@@ -341,8 +370,6 @@ WHERE con.contype = 'p'  -- 'p' = PRIMARY KEY
     dbPassword: string;
     sqlQuery: string;
   }) {
-    console.log("Executing:", sqlQuery);
-
     try {
       // Must connect to the right database
       const client = new Pool({
@@ -355,10 +382,15 @@ WHERE con.contype = 'p'  -- 'p' = PRIMARY KEY
 
       // const result = await client.query(query, [dbUserName]);
       const result = await client.query(sqlQuery);
-      console.log("\n\n\nresult is here", result);
+
       await client.end();
 
-      return result.rows;
+      // return result.rows;
+      return new PGClassResults<typeof result.rows>({
+        success: true,
+        message: `Affected rows ${result.rowCount}`,
+        data: result.rows,
+      });
       // return ["hello"];
     } catch (error) {
       logger.error(
@@ -379,7 +411,7 @@ WHERE con.contype = 'p'  -- 'p' = PRIMARY KEY
     dbPassword: string;
     sqlQuery: string;
   }) {
-    console.log("Executing:", sqlQuery);
+    
 
     try {
       // Must connect to the right database
@@ -393,11 +425,14 @@ WHERE con.contype = 'p'  -- 'p' = PRIMARY KEY
 
       // const result = await client.query(query, [dbUserName]);
       const result = await client.query(sqlQuery);
-      console.log("\n\n\nresult is here", result);
+      
       await client.end();
 
-      return result.rows;
-      // return ["hello"];
+      return new PGClassResults<typeof result.rows>({
+        success: true,
+        message: `Affected rows ${result.rowCount}`,
+        data: result.rows,
+      });
     } catch (error) {
       logger.error(
         `Failed to fetch tables for ${dbUserName} in ${dbName}:`,
