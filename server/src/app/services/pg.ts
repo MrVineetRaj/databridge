@@ -101,6 +101,54 @@ export class PostgresServices {
     }
   }
 
+  async changeDbPassword({
+    dbName,
+    dbUserName,
+    dbPassword,
+  }: {
+    dbName: string;
+    dbUserName: string;
+    dbPassword: string;
+  }) {
+    const client = new Client({
+      user: dbUserName,
+      password: dbPassword, // current password
+      database: dbName,
+      host: "localhost", // or your DB host
+      port: 5432, // default postgres port
+    });
+
+    const newPassword = crypto.randomBytes(12).toString("hex");
+
+    try {
+      await client.connect();
+
+      // Parameterized query for safety (though pg doesn’t parametrize identifiers)
+      const query = `ALTER USER ${dbUserName} WITH PASSWORD '${newPassword}';`;
+
+      await client.query(query);
+
+      return new PGClassResults<string>({
+        message: "Password changed successfully",
+        success: true,
+        data: newPassword,
+      });
+    } catch (err) {
+      if (err instanceof Error) {
+        console.error("❌ Error updating password:", err.message);
+      }
+
+      console.error("❌ Error updating password:", "Unknown error");
+      return new PGClassResults<string>({
+        message: "❌ Error updating password",
+        success: false,
+        data: "",
+      });
+    } finally {
+      await client.end();
+    }
+  }
+
   async getDatabasesForUser({
     platformUsername,
   }: {
@@ -411,8 +459,6 @@ WHERE con.contype = 'p'  -- 'p' = PRIMARY KEY
     dbPassword: string;
     sqlQuery: string;
   }) {
-    
-
     try {
       // Must connect to the right database
       const client = new Pool({
@@ -425,7 +471,7 @@ WHERE con.contype = 'p'  -- 'p' = PRIMARY KEY
 
       // const result = await client.query(query, [dbUserName]);
       const result = await client.query(sqlQuery);
-      
+
       await client.end();
 
       return new PGClassResults<typeof result.rows>({

@@ -30,6 +30,7 @@
   "dependencies": {
     "@prisma/client": "6.17.1",
     "@trpc/server": "^11.6.0",
+    "bullmq": "^5.62.0",
     "connect-redis": "^9.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
