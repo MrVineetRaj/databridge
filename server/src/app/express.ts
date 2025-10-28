@@ -13,6 +13,7 @@ import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { authRoutes } from "./routes/auth";
 import { appRouter } from "./trpc-routes";
 import { createTRPCContext } from "./trpc";
+import { rotateDbPasswordJobQueue, rotateDbPasswordJobs } from "../server";
 
 /**
  * Creates and configures an Express application instance.
@@ -54,10 +55,10 @@ export function createExpressApp(): Application {
 
   app.use(
     responseTime((req: Request, res: Response, time) => {
-      if(req.originalUrl != "/api/v1/health/metrics"){
+      if (req.originalUrl != "/api/v1/health/metrics") {
         totalReqCounter.inc();
       }
-      const route = req.originalUrl.split("?")[0] as string
+      const route = req.originalUrl.split("?")[0] as string;
       reqResTime
         .labels({
           method: req.method,
@@ -138,6 +139,21 @@ export function createExpressApp(): Application {
       createContext: createTRPCContext,
     })
   );
+
+  app.get("/test", (req: Request, res: Response) => {
+    console.log(Date.now());
+    const job = rotateDbPasswordJobQueue.add(
+      "rotate_password",
+      {
+        projectId: "cmguszdo70001i07qxjf06btr",
+      },
+      { delay: 1000 * 60 }
+    );
+
+    res.json({
+      message: "Done",
+    });
+  });
 
   return app;
 }

@@ -1,4 +1,5 @@
 import { router } from "../trpc";
+import { dbInstanceRoutes } from "./db-instance";
 import { healthRoutes } from "./health";
 import { projectRoutes } from "./projects";
 
@@ -8,6 +9,7 @@ import { projectRoutes } from "./projects";
 export const appRouter = router({
   healthRoutes,
   projectRoutes,
+  dbInstanceRoutes,
 });
 
 export type AppRouter = typeof appRouter;

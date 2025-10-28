@@ -19,7 +19,7 @@ const TablePage = () => {
   >([]);
 
   const deleteItemFromTable = useMutation(
-    trpc.projectRoutes.deleteItemFromDatabase.mutationOptions({
+    trpc.dbInstanceRoutes.deleteItemFromDatabase.mutationOptions({
       onSuccess: (res) => {
         console.log(res);
         toast.success(res.message, {
@@ -50,9 +50,9 @@ const TablePage = () => {
     })
   );
   const runSqlQuery = useMutation(
-    trpc.projectRoutes.searchItemsUsingSqlQuery.mutationOptions({
+    trpc.dbInstanceRoutes.searchItemsUsingSqlQuery.mutationOptions({
       onSuccess: (res) => {
-        toast.success(res.message, {
+        toast.success(res?.message, {
           duration: 3000,
           id: "table-query",
         });
@@ -68,14 +68,15 @@ const TablePage = () => {
   );
 
   const saveChanges = useMutation(
-    trpc.projectRoutes.updateMultipleRows.mutationOptions({
+    trpc.dbInstanceRoutes.updateMultipleRows.mutationOptions({
       onSuccess: (res) => {
         toast.success(res?.message, {
           duration: 3000,
           id: "table-query",
         });
+
         queryClient.invalidateQueries(
-          trpc.projectRoutes.getTableContent.queryOptions({
+          trpc.dbInstanceRoutes.getTableContent.queryOptions({
             dbName: databases?.data
               ? databases?.data[selectedDatabase]
               : "XXXXX",
@@ -97,20 +98,20 @@ const TablePage = () => {
     })
   );
   const { data: databases, isPending: loadingDatabase } = useQuery(
-    trpc.projectRoutes.getDatabasesInsideProject.queryOptions({
+    trpc.dbInstanceRoutes.getDatabasesInsideProject.queryOptions({
       projectId: project_id as string,
     })
   );
 
   const { data: tables, isPending: loadingTables } = useQuery(
-    trpc.projectRoutes.getTablesOfADatabase.queryOptions({
+    trpc.dbInstanceRoutes.getTablesOfADatabase.queryOptions({
       projectId: project_id as string,
       dbName: databases?.data ? databases?.data[selectedDatabase] : "XXXXX",
     })
   );
 
   const { data: tableContent, isPending: loadingTableContent } = useQuery(
-    trpc.projectRoutes.getTableContent.queryOptions({
+    trpc.dbInstanceRoutes.getTableContent.queryOptions({
       dbName: databases?.data ? databases?.data[selectedDatabase] : "XXXXX",
       tableName:
         "public." +
