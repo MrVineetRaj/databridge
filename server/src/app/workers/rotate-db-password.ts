@@ -62,7 +62,7 @@ function initiateRotateDbPasswordJobs({
       rotateDbPasswordJobQueue.add(
         "rotate_password",
         {
-          projectId: "cmguszdo70001i07qxjf06btr",
+          projectId: project.id,
         },
         {
           delay: 1000 * 60 * 60 * 24 * 30,

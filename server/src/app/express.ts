@@ -140,20 +140,20 @@ export function createExpressApp(): Application {
     })
   );
 
-  app.get("/test", (req: Request, res: Response) => {
-    console.log(Date.now());
-    const job = rotateDbPasswordJobQueue.add(
-      "rotate_password",
-      {
-        projectId: "cmguszdo70001i07qxjf06btr",
-      },
-      { delay: 1000 * 60 }
-    );
+  // app.get("/test", (req: Request, res: Response) => {
+  //   console.log(Date.now());
+  //   const job = rotateDbPasswordJobQueue.add(
+  //     "rotate_password",
+  //     {
+  //       projectId: "cmguszdo70001i07qxjf06btr",
+  //     },
+  //     { delay: 1000 * 60 }
+  //   );
 
-    res.json({
-      message: "Done",
-    });
-  });
+  //   res.json({
+  //     message: "Done",
+  //   });
+  // });
 
   return app;
 }
