@@ -1,4 +1,4 @@
-import { rotateDbPasswordJobQueue } from "../../server";
+import { notificationJobQueue, rotateDbPasswordJobQueue } from "../../server";
 import { db } from "../lib/db";
 import { adminPool, PostgresServices } from "../services/pg";
 import { RedisQueueAndWorker } from "../services/redis";
@@ -30,7 +30,7 @@ function initiateRotateDbPasswordJobs({
   const worker = rotateDbPasswordJobs.getWorker(async (job) => {
     console.log(Date.now());
     console.log({ name: job.name, payload: job.data });
-    const { projectId } = job.data;
+    const { projectId, userId } = job.data;
     const project = await db.project.findUnique({
       where: {
         id: projectId,
@@ -63,11 +63,27 @@ function initiateRotateDbPasswordJobs({
         "rotate_password",
         {
           projectId: project.id,
+          userId: userId,
         },
         {
           delay: 1000 * 60 * 60 * 24 * 30,
         }
       );
+
+      const integration = await db.discordIntegration.findUnique({
+        where: {
+          userId: userId as string,
+        },
+      });
+
+      console.log("integration", integration);
+
+      if (integration?.channelId) {
+        notificationJobQueue.add("password_rotated", {
+          projectId,
+          channelId: integration.channelId,
+        });
+      }
     }
   });
 

@@ -24,6 +24,7 @@ const envSchema = z.object({
     .min(1, "DATABASE_ADMIN_PASSWORD is required"),
   DATABASE_HOST: z.string().min(1, "DATABASE_HOST is required"),
   DATABASE_PORT: z.string().min(1, "DATABASE_PORT is required"),
+  DISCORD_BOT_LOGIN_TOKEN: z.string().min(1, "DATABASE_PORT is required"),
 });
 
 /**

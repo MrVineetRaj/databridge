@@ -24,9 +24,7 @@ services:
     image: prom/prometheus
     ports:
       - 9090:9090
-    volumes:
-      - ./prometheus-config.yml:/etc/prometheus/prometheus.yml
-      
+
 volumes:
   redis-data:
   pg-data:

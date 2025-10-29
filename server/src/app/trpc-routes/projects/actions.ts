@@ -40,6 +40,7 @@ export class Actions {
       "rotate_password",
       {
         projectId: newProject.id,
+        userId: user.id,
       },
       {
         delay: 1000 * 60 * 60 * 24 * 30,

@@ -7,6 +7,10 @@ import {
 
 export default [
   index("pages/home.tsx"),
+  route(
+    "//integrations/discord/callback",
+    "pages/discord-integration-page.tsx"
+  ),
   layout("layouts/console-layout.tsx", [
     route("/console", "pages/console.tsx"),
     route("/console/:project_id", "pages/project-page.tsx"),
