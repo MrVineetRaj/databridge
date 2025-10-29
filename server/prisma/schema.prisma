@@ -28,6 +28,7 @@ model User {
   createdAt DateTime @default(now())
 
   projects Project[]
+  discordIntegration DiscordIntegration[]
 }
 
 
@@ -46,4 +47,15 @@ model Project {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId],references: [id],onDelete: Cascade)
+}
+
+model DiscordIntegration{
+  id String @id @default(cuid())
+  userId String @unique
+  channelId String
+
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId] , references: [id] , onDelete: Cascade)
 }

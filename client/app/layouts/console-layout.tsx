@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { HomeIcon } from "lucide-react";
+import { CogIcon, GitBranchIcon, HomeIcon, LogOutIcon } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import {
   Link,
@@ -9,11 +9,13 @@ import {
   useParams,
 } from "react-router";
 import { ProjectForm } from "~/components/projects/project-form";
+import { IntegrationForm } from "~/components/shared/integrations";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupLabel,
   SidebarHeader,
@@ -22,12 +24,14 @@ import {
 import { useIsMobile } from "~/hooks/use-mobile";
 import { useTRPC } from "~/lib/trpc.config";
 import { cn } from "~/lib/utils";
+import { useUserStore } from "~/store/user-store";
 
 const ConsoleLayout = () => {
   const isMobile = useIsMobile();
   const trpc = useTRPC();
   // const
   const location = useLocation();
+  const { user, logout } = useUserStore();
 
   const [reloadReq, setReloadReq] = useState<boolean>(false);
   const queryClient = useQueryClient();
@@ -113,6 +117,22 @@ const ConsoleLayout = () => {
                 ))}
             </SidebarGroup>
           </SidebarContent>
+          <SidebarFooter className="flex flex-row items-center border bg-white ">
+            <span className="w-full flex items-center gap-2">
+              <img
+                src={user?.avatar}
+                alt={"avatar"}
+                className="size-10 rounded-full"
+              />
+              <p>{user?.name}</p>
+            </span>
+            <span className="flex items-center gap-2">
+              <IntegrationForm />
+              <Button variant="destructive">
+                <LogOutIcon />
+              </Button>
+            </span>
+          </SidebarFooter>
         </Sidebar>
       </SidebarProvider>
       <main className="w-full overflow-hidden">

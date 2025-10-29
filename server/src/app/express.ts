@@ -142,13 +142,10 @@ export function createExpressApp(): Application {
 
   // app.get("/test", (req: Request, res: Response) => {
   //   console.log(Date.now());
-  //   const job = rotateDbPasswordJobQueue.add(
-  //     "rotate_password",
-  //     {
-  //       projectId: "cmguszdo70001i07qxjf06btr",
-  //     },
-  //     { delay: 1000 * 60 }
-  //   );
+  //   const job = rotateDbPasswordJobQueue.add("rotate_password", {
+  //     projectId: "cmguszdo70001i07qxjf06btr",
+  //     userId: "cmgusx6ii0000i0cknnccxg21",
+  //   });
 
   //   res.json({
   //     message: "Done",
