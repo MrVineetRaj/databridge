@@ -6,7 +6,7 @@ import { AuthedContext, Context } from "../../trpc";
 import { adminPool, PostgresServices } from "../../services/pg";
 import { envConf } from "../../lib/envConf";
 import format from "pg-format";
-import { notificationJobQueue, rotateDbPasswordJobs } from "../../../server";
+import { notificationJobQueue } from "../../../server";
 
 export class Actions {
   async newIntegration(input: { channelId: string }, ctx: AuthedContext) {

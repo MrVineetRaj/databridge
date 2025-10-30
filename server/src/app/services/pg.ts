@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { Pool, Client } from "pg";
 import format from "pg-format";
 import { envConf } from "../lib/envConf";
-import logger from "../lib/logger";
+import logger, { loggerMetadata } from "../lib/logger";
 
 export const adminPool = new Pool({
   host: envConf.DATABASE_HOST,
@@ -485,6 +485,164 @@ WHERE con.contype = 'p'  -- 'p' = PRIMARY KEY
         error
       );
       throw new Error("Could not fetch tables.");
+    }
+  }
+  async findIdleDatabasesWithDataActivity(idleDays = 7) {
+    const client = await this.pool.connect();
+
+    try {
+      const query = `
+      SELECT
+        d.datname as database_name,
+        r.rolname as owner_username,
+        pg_size_pretty(pg_database_size(d.datname)) as size,
+        COALESCE(COUNT(psa.pid), 0) as active_connections,
+        EXTRACT(EPOCH FROM (NOW() - s.stats_reset)) / 86400 as days_since_stats_reset,
+        s.tup_returned as tuples_read,
+        s.tup_fetched as tuples_fetched,
+        s.tup_inserted as tuples_inserted,
+        s.tup_updated as tuples_updated,
+        s.tup_deleted as tuples_deleted,
+        (s.tup_returned + s.tup_fetched + s.tup_inserted + s.tup_updated + s.tup_deleted) as total_operations,
+        CASE 
+          WHEN (s.tup_returned + s.tup_fetched + s.tup_inserted + s.tup_updated + s.tup_deleted) = 0 
+          THEN 'Never Used'
+          WHEN s.stats_reset < NOW() - INTERVAL '${idleDays} days' 
+          THEN 'Idle'
+          ELSE 'Active'
+        END as status
+      FROM pg_database d
+      LEFT JOIN pg_roles r ON d.datdba = r.oid
+      LEFT JOIN pg_stat_database s ON d.oid = s.datid
+      LEFT JOIN pg_stat_activity psa ON d.oid = psa.datid
+      WHERE 
+        d.datname NOT IN ('postgres', 'template0', 'template1')
+      GROUP BY d.datname, r.rolname, s.stats_reset, s.tup_returned, s.tup_fetched, 
+               s.tup_inserted, s.tup_updated, s.tup_deleted
+      HAVING 
+        (s.tup_returned + s.tup_fetched + s.tup_inserted + s.tup_updated + s.tup_deleted) = 0
+        OR s.stats_reset < NOW() - INTERVAL '${idleDays} days'
+      ORDER BY total_operations ASC, s.stats_reset DESC;
+    `;
+
+      const result = await client.query(query);
+      return result.rows;
+    } catch (err) {
+      console.error("Error finding idle databases:", (err as Error).message);
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  async pauseUserAccessForDatabases({
+    databaseNames,
+  }: {
+    databaseNames: string[];
+  }) {
+    const client = await this.pool.connect();
+
+    try {
+      // Terminate all connections to these specific databases
+      await client.query(
+        `
+        SELECT pg_terminate_backend(pid)
+        FROM pg_stat_activity
+        WHERE datname = ANY($1) AND pid <> pg_backend_pid();
+      `,
+        [databaseNames]
+      );
+
+      // Revoke privileges only on the specific databases (not all)
+      for (const dbName of databaseNames) {
+        await client.query(
+          format("REVOKE ALL PRIVILEGES ON DATABASE %I FROM PUBLIC;", dbName)
+        );
+        console.log(`⏸️  Paused access for database: ${dbName}`);
+      }
+
+      logger.info(
+        `Databases paused`,
+        loggerMetadata.system({
+          filePath: __filename,
+          description: `Paused databases: ${databaseNames.join(", ")}`,
+        })
+      );
+
+      return { paused: true, databases: databaseNames };
+    } catch (err) {
+      console.error(`Error pausing databases:`, (err as Error).message);
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  // Resume specific databases later
+  async resumeUserAccessForDatabases(databaseNames: string[]) {
+    const client = await this.pool.connect();
+
+    try {
+      for (const dbName of databaseNames) {
+        await client.query(
+          format("GRANT ALL PRIVILEGES ON DATABASE %I TO PUBLIC;", dbName)
+        );
+        console.log(`▶️  Resumed access for database: ${dbName}`);
+      }
+
+      return { resumed: true, databases: databaseNames };
+    } catch (err) {
+      console.error(`Error resuming databases:`, (err as Error).message);
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  async deleteIdleDatabase({
+    inactiveDatabaseNames,
+  }: {
+    inactiveDatabaseNames: string[];
+  }) {
+    const client = await this.pool.connect();
+
+    try {
+      // 1. Terminate all connections to these databases
+      await client.query(
+        `
+      SELECT pg_terminate_backend(pid)
+      FROM pg_stat_activity
+      WHERE datname = ANY($1) AND pid <> pg_backend_pid();
+    `,
+        [inactiveDatabaseNames] // ✅ Fixed: pass array directly
+      );
+
+      // 2. Delete each database
+      for (const dbName of inactiveDatabaseNames) {
+        await client.query(
+          format("DROP DATABASE IF EXISTS %I;", dbName) // ✅ Use format() for safety
+        );
+      }
+
+      logger.info(
+        `databases deleted`,
+        loggerMetadata.system({
+          filePath: __filename,
+          description: `Deleted databases were ${inactiveDatabaseNames.join(
+            ", "
+          )}`,
+        })
+      );
+
+      return { success: true, deleted: inactiveDatabaseNames };
+    } catch (err) {
+      console.error(
+        `❌ Error deleting database ${inactiveDatabaseNames}:`,
+        (err as Error).message
+      );
+      throw err;
+    } finally {
+      client.release();
     }
   }
 }

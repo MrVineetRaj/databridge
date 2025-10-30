@@ -1,9 +1,9 @@
 import { type Request, type Response } from "express";
 import { db } from "../../lib/db";
 import { ApiResponse, ErrorResponse } from "../../lib/api.helper";
+import { notificationJobQueue } from "../../../server";
 
 class Controller {
-  // github call back function on authentication in case of ew signups it will create new entry in database
   public async githubCallback(req: Request, res: Response): Promise<void> {
     const user = req.user as any;
 
@@ -60,11 +60,16 @@ class Controller {
       return;
     }
 
-    await db.user.create({
+    const newUser = await db.user.create({
       data: {
-        name: user?.displayName,
+        name: user?.displayName || user?.username,
         email: user?.emails[0].value,
       },
+    });
+
+    notificationJobQueue.add("welcome_mail", {
+      username: newUser.name,
+      email: newUser.email,
     });
 
     res.send(`
@@ -132,22 +137,6 @@ class Controller {
         })
       );
     });
-  }
-
-  public async discordCallback(req: Request, res: Response): Promise<void> {
-    const query = req.query;
-    const fullUrl = req.originalUrl;
-
-    res.json(
-      new ApiResponse({
-        statusCode: 200,
-        message: "Discord OAuth callback received",
-        data: {
-          query,
-          fullUrl,
-        },
-      })
-    );
   }
 }
 

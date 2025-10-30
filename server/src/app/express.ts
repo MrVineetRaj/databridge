@@ -13,7 +13,7 @@ import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { authRoutes } from "./routes/auth";
 import { appRouter } from "./trpc-routes";
 import { createTRPCContext } from "./trpc";
-import { rotateDbPasswordJobQueue, rotateDbPasswordJobs } from "../server";
+import { notificationJobQueue } from "../server";
 
 /**
  * Creates and configures an Express application instance.
@@ -140,17 +140,17 @@ export function createExpressApp(): Application {
     })
   );
 
-  // app.get("/test", (req: Request, res: Response) => {
-  //   console.log(Date.now());
-  //   const job = rotateDbPasswordJobQueue.add("rotate_password", {
-  //     projectId: "cmguszdo70001i07qxjf06btr",
-  //     userId: "cmgusx6ii0000i0cknnccxg21",
-  //   });
+  app.get("/test", (req: Request, res: Response) => {
+    console.log(Date.now());
+    const job = notificationJobQueue.add("welcome_mail", {
+      username: "Vineet Raj",
+      email: "vineetrajrj26@gmail.com",
+    });
 
-  //   res.json({
-  //     message: "Done",
-  //   });
-  // });
+    res.json({
+      message: "Done",
+    });
+  });
 
   return app;
 }

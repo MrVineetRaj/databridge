@@ -4,10 +4,10 @@ import { envConf } from "./app/lib/envConf";
 import logger, { loggerMetadata } from "./app/lib/logger";
 import client from "prom-client";
 import { appRouter } from "./app/trpc-routes";
-import { initiateRotateDbPasswordJobs } from "./app/workers/rotate-db-password";
+import { initiateDbInstanceJobs } from "./app/workers/db-instance-jobs";
 import { discordService } from "./app/services/discord";
-import { initiateNotificationJobs } from "./app/workers/notification-worker";
-
+import { initiateNotificationJobs } from "./app/workers/notification-jobs";
+import "./app/workers/cron-jobs";
 const PORT = envConf.PORT;
 
 const server = createServer(createExpressApp());
@@ -18,7 +18,7 @@ collectDefaultMetrics({
   register: client.register,
 });
 
-export const rotateDbPasswordJobs = initiateRotateDbPasswordJobs({
+export const dbInstanceJobs = initiateDbInstanceJobs({
   redisConnection: {
     host: envConf.REDIS_HOST,
     port: +envConf.REDIS_PORT,
@@ -31,7 +31,7 @@ export const notificationJobs = initiateNotificationJobs({
   },
 });
 
-export const rotateDbPasswordJobQueue = rotateDbPasswordJobs.getQueue();
+export const dbInstanceJobQueue = dbInstanceJobs.getQueue();
 export const notificationJobQueue = notificationJobs.getQueue();
 
 export const discordClient = discordService.getClient();

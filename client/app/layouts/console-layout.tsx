@@ -29,15 +29,22 @@ import { useUserStore } from "~/store/user-store";
 const ConsoleLayout = () => {
   const isMobile = useIsMobile();
   const trpc = useTRPC();
-  // const
+  const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useUserStore();
+  const { user, logout, isAuthenticated, error, loadingUser } = useUserStore();
 
   const [reloadReq, setReloadReq] = useState<boolean>(false);
   const queryClient = useQueryClient();
   const { data: projectDetails } = useQuery(
     trpc.projectRoutes.getProjects.queryOptions()
   );
+
+  useEffect(() => {
+    console.log({ loadingUser, isAuthenticated, error });
+    if (!loadingUser && !isAuthenticated && error) {
+      navigate("/");
+    }
+  }, [isAuthenticated, error, loadingUser]);
 
   useEffect(() => {
     if (reloadReq) {
@@ -128,7 +135,12 @@ const ConsoleLayout = () => {
             </span>
             <span className="flex items-center gap-2">
               <IntegrationForm />
-              <Button variant="destructive">
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  logout();
+                }}
+              >
                 <LogOutIcon />
               </Button>
             </span>

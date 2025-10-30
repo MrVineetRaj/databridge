@@ -25,6 +25,10 @@ const envSchema = z.object({
   DATABASE_HOST: z.string().min(1, "DATABASE_HOST is required"),
   DATABASE_PORT: z.string().min(1, "DATABASE_PORT is required"),
   DISCORD_BOT_LOGIN_TOKEN: z.string().min(1, "DATABASE_PORT is required"),
+  MAIL_TRAP_HOST: z.string().min(1, "MAIL_TRAP_HOST is required"),
+  MAIL_TRAP_PORT: z.string().min(1, "MAIL_TRAP_PORT is required"),
+  MAIL_TRAP_USERNAME: z.string().min(1, "MAIL_TRAP_USERNAME is required"),
+  MAIL_TRAP_PASSWORD: z.string().min(1, "MAIL_TRAP_PASSWORD is required"),
 });
 
 /**
