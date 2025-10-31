@@ -6,7 +6,7 @@ import { AuthedContext, Context } from "../../trpc";
 import { adminPool, PostgresServices } from "../../services/pg";
 import { envConf } from "../../lib/envConf";
 import format from "pg-format";
-import { rotateDbPasswordJobs } from "../../../server";
+import { dbInstanceJobQueue } from "../../../server";
 
 export class Actions {
   async newProject(
@@ -35,8 +35,7 @@ export class Actions {
       },
     });
 
-    const rotateDbPasswordJobQueue = rotateDbPasswordJobs.getQueue();
-    rotateDbPasswordJobQueue.add(
+    dbInstanceJobQueue.add(
       "rotate_password",
       {
         projectId: newProject.id,

@@ -77,14 +77,18 @@ const useUserStore = create<AuthState>((set) => ({
     }
   },
   async logout() {
+    set({ loadingUser: false });
     try {
       const { data: result } = await axiosInstance("/auth/logout");
 
       if (result.success) {
         // console.log(result);
-        set({ isAuthenticated: false, error: "Not Auth", user: null });
+        set({ isAuthenticated: false, error: "Logged out", user: null });
       }
-    } catch (error) {}
+    } catch (error) {
+    } finally {
+      set({ loadingUser: false });
+    }
   },
   async fetchProfile() {
     set({ loadingUser: true });
@@ -101,7 +105,7 @@ const useUserStore = create<AuthState>((set) => ({
           error: "Not able to sync with server",
         });
     } finally {
-      set({ loadingUser: true });
+      set({ loadingUser: false });
     }
   },
 }));

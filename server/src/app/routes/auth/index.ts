@@ -23,11 +23,7 @@ export function createRouter(): Router {
     }),
     AsyncHandler(controller.githubCallback.bind(controller))
   );
-  // Discord OAuth2 callback route
-  router.get(
-    "/callback/discord",
-    AsyncHandler(controller.discordCallback.bind(controller))
-  );
+
 
   // req.user is populated by deserializeUser
   router.get(
