@@ -339,4 +339,43 @@ WHERE t.%I = u.%I;
       data: result.data,
     });
   }
+
+  async resumeDatabases(
+    input: {
+      projectId: string;
+    },
+    ctx: AuthedContext
+  ) {
+    const project = await db.project.findUnique({
+      where: {
+        id: input.projectId,
+      },
+    });
+
+    if (!project) {
+      throw new Error("No project found");
+    }
+
+    if (project.inactiveDatabases.length > 0) {
+      const pgServices = new PostgresServices(adminPool);
+
+      await pgServices.resumeUserAccessForDatabases({
+        databaseNames: project?.inactiveDatabases,
+      });
+    }
+
+    await db.project.update({
+      where: {
+        id: input.projectId,
+      },
+      data: {
+        inactiveDatabases: [],
+      },
+    });
+
+    return new ApiResponse({
+      statusCode: 200,
+      message: `Databases ${project?.inactiveDatabases?.join(", ")} resume`,
+    });
+  }
 }

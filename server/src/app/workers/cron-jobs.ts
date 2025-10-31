@@ -4,7 +4,7 @@ import { db } from "../lib/db";
 import { dbInstanceJobQueue } from "../../server";
 import logger, { loggerMetadata } from "../lib/logger";
 
-cron.schedule("* * * * *", async () => {
+cron.schedule("0 0 */7 * *", async () => {
   logger.info(`Checking idle databases for cleanup`, {
     ...loggerMetadata.system({
       filePath: __filename,

@@ -154,8 +154,9 @@ export class PostgresServices {
   }: {
     platformUsername: string;
   }): Promise<string[]> {
+    console.log("\n\n\n\n", platformUsername, "\n\n\n\n");
     // We look for DB owners that start with the platform username, e.g., 'vineet_%'
-    const userPattern = `${platformUsername}%`;
+    const userPattern = `${platformUsername}`;
 
     const query = format(
       `SELECT d.datname FROM pg_database d
@@ -579,7 +580,11 @@ WHERE con.contype = 'p'  -- 'p' = PRIMARY KEY
   }
 
   // Resume specific databases later
-  async resumeUserAccessForDatabases(databaseNames: string[]) {
+  async resumeUserAccessForDatabases({
+    databaseNames,
+  }: {
+    databaseNames: string[];
+  }) {
     const client = await this.pool.connect();
 
     try {
