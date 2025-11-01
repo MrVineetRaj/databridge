@@ -1,5 +1,7 @@
 import { dbInstanceJobQueue, notificationJobQueue } from "../../server";
 import { db } from "../lib/db";
+import logger, { loggerMetadata } from "../lib/logger";
+import { encryptionServices } from "../services/encryption";
 import { adminPool, PostgresServices } from "../services/pg";
 import { RedisQueueAndWorker } from "../services/redis";
 
@@ -46,9 +48,21 @@ function initiateDbInstanceJobs({
 
       const pgServices = new PostgresServices(adminPool);
 
+      const decryptedRes = encryptionServices.decrypt(project?.dbPassword!);
+
+      if (!decryptedRes.success) {
+        logger.error(
+          "Invalid encrypted data",
+          loggerMetadata.system({
+            filePath: __filename,
+          })
+        );
+        throw new Error("Invalid encrypted data");
+      }
+
       const pgResult = await pgServices.changeDbPassword({
         dbName: project.dbName as string,
-        dbPassword: project.dbPassword as string,
+        dbPassword: decryptedRes.result,
         dbUserName: project.dbUser as string,
       });
 
@@ -58,7 +72,7 @@ function initiateDbInstanceJobs({
             id: project.id,
           },
           data: {
-            dbPassword: pgResult.data,
+            dbPassword: encryptionServices.encrypt(pgResult.data),
           },
         });
 
@@ -85,6 +99,7 @@ function initiateDbInstanceJobs({
           notificationJobQueue.add("password_rotated", {
             projectId,
             channelId: integration.channelId,
+            platforms: ["discord"],
           });
         }
       }

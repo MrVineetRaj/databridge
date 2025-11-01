@@ -11,7 +11,7 @@ cron.schedule("0 0 */7 * *", async () => {
     }),
   });
   const pgServices = new PostgresServices(adminPool);
-  const res = await pgServices.findIdleDatabasesWithDataActivity();
+  const res = await pgServices.findIdleDatabasesWithDataActivity(30);
 
   const db_meta: {
     dbName: string;

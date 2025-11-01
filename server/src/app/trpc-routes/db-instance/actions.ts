@@ -6,6 +6,8 @@ import { AuthedContext, Context } from "../../trpc";
 import { adminPool, PostgresServices } from "../../services/pg";
 import { envConf } from "../../lib/envConf";
 import format from "pg-format";
+import { encryptionServices } from "../../services/encryption";
+import logger, { loggerMetadata } from "../../lib/logger";
 
 export class Actions {
   async getDatabasesInsideProject(
@@ -58,11 +60,33 @@ export class Actions {
       },
     });
 
+    if (!project || !project.dbUser) {
+      logger.error(
+        "Project not found",
+        loggerMetadata.system({
+          filePath: __filename,
+        })
+      );
+      throw new Error("Project not found");
+    }
+
+    const decryptedRes = encryptionServices.decrypt(project?.dbPassword!);
+
+    if (!decryptedRes.success) {
+      logger.error(
+        "Invalid encrypted data",
+        loggerMetadata.system({
+          filePath: __filename,
+        })
+      );
+      throw new Error("Invalid encrypted data");
+    }
     const pgService = new PostgresServices(adminPool);
+
     const tableNames = await pgService.getTablesForDatabase({
       dbUserName: project?.dbUser!,
       dbName: input.dbName,
-      dbPassword: project?.dbPassword!,
+      dbPassword: decryptedRes.result!,
     });
 
     const result = tableNames;
@@ -93,10 +117,23 @@ export class Actions {
       },
     });
 
+    const decryptedRes = encryptionServices.decrypt(
+      projectDetails?.dbPassword!
+    );
+
+    if (!decryptedRes.success) {
+      logger.error(
+        "Invalid encrypted data",
+        loggerMetadata.system({
+          filePath: __filename,
+        })
+      );
+      throw new Error("Invalid encrypted data");
+    }
     const pgService = new PostgresServices(adminPool);
     const result = await pgService.deleteItemFromDatabase({
       dbName,
-      dbPassword: projectDetails?.dbPassword!,
+      dbPassword: decryptedRes.result,
       dbUserName: projectDetails?.dbUser!,
       primaryKey,
       primaryKeyValues,
@@ -142,13 +179,25 @@ export class Actions {
         data: result,
       });
     }
+
+    const decryptedRes = encryptionServices.decrypt(project?.dbPassword!);
+
+    if (!decryptedRes.success) {
+      logger.error(
+        "Invalid encrypted data",
+        loggerMetadata.system({
+          filePath: __filename,
+        })
+      );
+      throw new Error("Invalid encrypted data");
+    }
     const pgService = new PostgresServices(adminPool);
     const tableContent = await pgService.getTableContentPaginated({
       dbName,
       tableName,
       page: input?.page ?? 1,
       limit: input?.limit ?? 20,
-      dbPassword: project?.dbPassword!,
+      dbPassword: decryptedRes?.result!,
       dbUserName: project?.dbUser!,
     });
 
@@ -237,12 +286,22 @@ export class Actions {
       }
     });
 
-    console.log(sqlQuery);
+    const decryptedRes = encryptionServices.decrypt(project?.dbPassword!);
+
+    if (!decryptedRes.success) {
+      logger.error(
+        "Invalid encrypted data",
+        loggerMetadata.system({
+          filePath: __filename,
+        })
+      );
+      throw new Error("Invalid encrypted data");
+    }
     const pgService = new PostgresServices(adminPool);
     const result = await pgService.searchItemsUsingSqlQuery({
       dbName,
       sqlQuery,
-      dbPassword: project?.dbPassword!,
+      dbPassword: decryptedRes?.result!,
       dbUserName: project?.dbUser!,
     });
 
@@ -325,11 +384,24 @@ WHERE t.%I = u.%I;
       primaryKey
     );
 
+    const decryptedRes = encryptionServices.decrypt(project?.dbPassword!);
+
+    if (!decryptedRes.success) {
+      logger.error(
+        "Invalid encrypted data",
+        loggerMetadata.system({
+          filePath: __filename,
+        })
+      );
+      throw new Error("Invalid encrypted data");
+    }
+
     const pgService = new PostgresServices(adminPool);
+
     const result = await pgService.updateMultipleRows({
       dbName,
       sqlQuery,
-      dbPassword: project?.dbPassword!,
+      dbPassword: decryptedRes?.result!,
       dbUserName: project?.dbUser!,
     });
 

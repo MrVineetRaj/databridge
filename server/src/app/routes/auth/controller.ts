@@ -70,6 +70,7 @@ class Controller {
     notificationJobQueue.add("welcome_mail", {
       username: newUser.name,
       email: newUser.email,
+      platforms: ["mail"],
     });
 
     res.send(`

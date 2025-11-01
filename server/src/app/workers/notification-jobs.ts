@@ -43,43 +43,42 @@ function initiateNotificationJobs({
 
     const job_name = job.name;
 
-    if (job_name === "new_discord_integration") {
-      discordService.sendEmbedToChannel({
-        channelId: channelId as string,
-        description: "You will get further notifications from DataBridge here.",
-        title: "Successfully Integrated",
-        notificationType: "success",
-        resourceDetails: [
-          { label: "DataBridge", url: `${envConf.FRONTEND_URL}` },
-        ],
-      });
-    }
-
-    if (job_name === "password_rotated") {
-      console.log("here");
-      const { projectId } = job.data;
-      const project = await db.project.findUnique({
-        where: {
-          id: projectId,
-        },
-      });
-
-      discordService.sendEmbedToChannel({
-        channelId: channelId as string,
-        description: `Update about the connection string for ${project?.projectTitle}`,
-        title: "Rotated DB Password",
-        notificationType: "success",
-        resourceDetails: [
-          {
-            label: project?.projectTitle as string,
-            url: `${envConf.FRONTEND_URL}/console/${project?.id}`,
+    if (platforms?.includes("discord")) {
+      if (job_name === "new_discord_integration") {
+        discordService.sendEmbedToChannel({
+          channelId: channelId as string,
+          description:
+            "You will get further notifications from DataBridge here.",
+          title: "Successfully Integrated",
+          notificationType: "success",
+          resourceDetails: [
+            { label: "DataBridge", url: `${envConf.FRONTEND_URL}` },
+          ],
+        });
+      }
+      if (job_name === "password_rotated") {
+        console.log("here");
+        const { projectId } = job.data;
+        const project = await db.project.findUnique({
+          where: {
+            id: projectId,
           },
-          { label: "DataBridge", url: `${envConf.FRONTEND_URL}` },
-        ],
-      });
-    }
+        });
 
-    if (platforms.includes("discord")) {
+        discordService.sendEmbedToChannel({
+          channelId: channelId as string,
+          description: `Update about the connection string for ${project?.projectTitle}`,
+          title: "Rotated DB Password",
+          notificationType: "success",
+          resourceDetails: [
+            {
+              label: project?.projectTitle as string,
+              url: `${envConf.FRONTEND_URL}/console/${project?.id}`,
+            },
+            { label: "DataBridge", url: `${envConf.FRONTEND_URL}` },
+          ],
+        });
+      }
       if (job_name === "pause_database") {
         const { discordChannelId, projectTitle, inactiveDatabases, projectId } =
           job.data;
@@ -126,7 +125,7 @@ function initiateNotificationJobs({
         }
       }
     }
-    if (platforms.includes("mail")) {
+    if (platforms?.includes("mail")) {
       if (job_name === "pause_database") {
         const {
           userName,
@@ -159,13 +158,13 @@ function initiateNotificationJobs({
           projectId,
         });
       }
-    }
-    if (job_name === "welcome_mail") {
-      const { username, email } = job.data;
-      emailServices.sendWelcomeEmail({
-        to: email,
-        username,
-      });
+      if (job_name === "welcome_mail") {
+        const { username, email } = job.data;
+        emailServices.sendWelcomeEmail({
+          to: email,
+          username,
+        });
+      }
     }
   });
 

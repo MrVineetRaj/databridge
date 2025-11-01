@@ -99,10 +99,11 @@ const useUserStore = create<AuthState>((set) => ({
       }
     } catch (error) {
       if (error instanceof AxiosError) {
-        set({ error: error.response?.data.message });
+        set({ error: error.response?.data.message, isAuthenticated: false });
       } else
         ({
           error: "Not able to sync with server",
+          isAuthenticated:false
         });
     } finally {
       set({ loadingUser: false });

@@ -107,6 +107,16 @@ export const TRPCAsyncHandler = <
         statusCode = 500;
       }
 
+      console.log(e)
+
+      logger.error(
+        e.message,
+        loggerMetadata.system({
+          filePath: __filename,
+          description: JSON.stringify(e),
+        })
+      );
+
       throw e;
     } finally {
       logger.api(
