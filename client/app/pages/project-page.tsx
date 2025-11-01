@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { CopyIcon, EyeClosedIcon, EyeIcon, TableIcon } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
@@ -28,6 +28,23 @@ const ConsolePage = () => {
       icon: TableIcon,
     },
   ];
+
+  const resumeDatabases = useMutation(
+    trpc.dbInstanceRoutes.resumeDatabases.mutationOptions({
+      onSuccess: (res) => {
+        toast.success(res.message, {
+          id: "resume-db-state",
+          duration: 3000,
+        });
+      },
+      onError: (err) => {
+        toast.error(err.message, {
+          id: "resume-db-state",
+          duration: 3000,
+        });
+      },
+    })
+  );
 
   const [projectDetails, setProjectDetails] = useState<{
     projectTitle: string;
@@ -110,36 +127,69 @@ const ConsolePage = () => {
           </div>
         </div>
         <div className="bg-sidebar w-full rounded-md p-4 shadow-md border space-y-2">
-          <h2 className="text-lg font-semibold">Connection String</h2>
-          <span className="flex items-center gap-2">
-            <pre className="p-2 bg-background border rounded-md w-full text-sm text-muted-foreground text-wrap">{`postgres://${
-              showingCred ? projectDetails?.dbUser : "<********>"
-            }:${showingCred ? projectDetails?.dbPassword : "<********>"}@${
-              projectDetails?.dbDomain
-            }/${projectDetails?.dbName}`}</pre>
-            <Button
-              variant={"outline"}
-              onClick={() => {
-                setShowingCred((prev) => !prev);
-              }}
-            >
-              {!showingCred ? (
-                <EyeClosedIcon className="size-4" />
-              ) : (
-                <EyeIcon />
-              )}
-            </Button>
-            <Button
-              variant={"outline"}
-              onClick={() => {
-                toast.success("Copied to clipboard!", { duration: 2000 });
-                navigator.clipboard.writeText(
-                  `postgres://${projectDetails?.dbUser}:${projectDetails?.dbPassword}@${projectDetails?.dbDomain}/${projectDetails?.dbName}?`
-                );
-              }}
-            >
-              <CopyIcon />
-            </Button>
+          <h2 className="text-lg font-semibold">Paused Databases</h2>
+          {projectDetailsFromDb.data.project?.inactiveDatabases &&
+            projectDetailsFromDb.data.project?.inactiveDatabases.length > 0 && (
+              <span className="flex flex-row items-center justify-between">
+                <span className="">
+                  We paused connections for your database{" "}
+                  <strong className="italic">
+                    {projectDetailsFromDb.data.project?.inactiveDatabases?.join(
+                      ", "
+                    )}
+                  </strong>
+                </span>
+                <Button
+                  onClick={() => {
+                    toast.loading("Resuming database", {
+                      id: "resume-db-state",
+                    });
+                    resumeDatabases.mutateAsync({
+                      projectId: project_id as string,
+                    });
+                  }}
+                >
+                  Enable
+                </Button>
+              </span>
+            )}
+          <h2 className="text-lg font-semibold">Connection Details</h2>
+
+          <span className="flex  items-center gap-2">
+            {!projectDetailsFromDb.data.project?.inactiveDatabases.includes(
+              projectDetails?.dbName as string
+            ) && (
+              <>
+                <pre className="p-2 bg-background border rounded-md w-full text-sm text-muted-foreground text-wrap">{`postgres://${
+                  showingCred ? projectDetails?.dbUser : "<********>"
+                }:${showingCred ? projectDetails?.dbPassword : "<********>"}@${
+                  projectDetails?.dbDomain
+                }/${projectDetails?.dbName}`}</pre>
+                <Button
+                  variant={"outline"}
+                  onClick={() => {
+                    setShowingCred((prev) => !prev);
+                  }}
+                >
+                  {!showingCred ? (
+                    <EyeClosedIcon className="size-4" />
+                  ) : (
+                    <EyeIcon />
+                  )}
+                </Button>
+                <Button
+                  variant={"outline"}
+                  onClick={() => {
+                    toast.success("Copied to clipboard!", { duration: 2000 });
+                    navigator.clipboard.writeText(
+                      `postgres://${projectDetails?.dbUser}:${projectDetails?.dbPassword}@${projectDetails?.dbDomain}/${projectDetails?.dbName}?`
+                    );
+                  }}
+                >
+                  <CopyIcon />
+                </Button>
+              </>
+            )}
           </span>
         </div>
         <div

@@ -22,6 +22,7 @@ export class Actions {
 
     notificationJobQueue.add("new_discord_integration", {
       channelId,
+      platforms: ["discord"],
     });
     return new ApiResponse<DiscordIntegration>({
       message: "Integration created successfully",
@@ -45,7 +46,7 @@ export class Actions {
         statusCode: 201, // 201 Created is more appropriate
       });
     }
-    const result = integration
+    const result = integration;
     return new ApiResponse<typeof result>({
       message: "Project created successfully",
       statusCode: 201,

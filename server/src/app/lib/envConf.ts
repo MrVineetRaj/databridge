@@ -12,6 +12,7 @@ const envSchema = z.object({
   BASE_URL: z.string().min(1, "BASE_URL is required"),
   VALID_ORIGINS: z.string().min(1, "VALID_ORIGINS is required"),
   FRONTEND_URL: z.string().min(1, "FRONTEND_URL is required"),
+  ENCRYPTION_KEY: z.string().min(1, "ENCRYPTION_KEY is required"),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   GITHUB_CLIENT_ID: z.string().min(1, "GITHUB_CLIENT_ID is required"),
   GITHUB_CLIENT_SECRET: z.string().min(1, "GITHUB_CLIENT_SECRET is required"),

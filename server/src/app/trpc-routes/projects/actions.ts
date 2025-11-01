@@ -7,6 +7,8 @@ import { adminPool, PostgresServices } from "../../services/pg";
 import { envConf } from "../../lib/envConf";
 import format from "pg-format";
 import { dbInstanceJobQueue } from "../../../server";
+import { encryptionServices } from "../../services/encryption";
+import logger, { loggerMetadata } from "../../lib/logger";
 
 export class Actions {
   async newProject(
@@ -22,14 +24,24 @@ export class Actions {
       username: user.id,
       projectTitle: projectTitle,
     });
-    // Now create the project record in your main application database
+    // // Now create the project record in your main application database
+
+    // const dbInfo = {
+    //   dbUsername: "cmhfy7paf0000i0d6zsvlykri_verdict",
+    //   dbPassword: "a07afac9efd742db91c011cb",
+    //   dbName: "verdict_ebd4333b_db",
+    // };
+
+    const encryptedPassword = encryptionServices.encrypt(dbInfo.dbPassword);
+
+    // console.log({dbInfo,encryptedPassword});
     const newProject = await db.project.create({
       data: {
         projectTitle,
         projectDescription,
         userId: user.id,
         dbUser: dbInfo.dbUsername, // Store the generated username
-        dbPassword: dbInfo.dbPassword,
+        dbPassword: encryptedPassword,
         dbName: dbInfo.dbName,
         dbDomain: "localhost:5432",
       },
@@ -60,6 +72,12 @@ export class Actions {
       where: {
         userId: user.id,
       },
+      select: {
+        dbPassword: false,
+        projectTitle: true,
+        projectDescription: true,
+        id: true,
+      },
     });
 
     return new ApiResponse<typeof projects>({
@@ -79,13 +97,28 @@ export class Actions {
       },
     });
 
+    const decryptedRes = encryptionServices.decrypt(project?.dbPassword!);
+
+    if (!decryptedRes.success) {
+      logger.error(
+        "Invalid encrypted data",
+        loggerMetadata.system({
+          filePath: __filename,
+        })
+      );
+      throw new Error("Invalid encrypted data");
+    }
+
     const pgService = new PostgresServices(adminPool);
     const dbNames = await pgService.getDatabasesForUser({
       platformUsername: project?.dbUser!,
     });
 
     const result = {
-      project,
+      project: {
+        ...project,
+        dbPassword: decryptedRes.result,
+      },
       detail: { dbCnt: dbNames.length },
     };
     return new ApiResponse<typeof result>({
