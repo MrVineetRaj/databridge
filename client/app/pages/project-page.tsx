@@ -8,6 +8,8 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { useTRPC } from "~/lib/trpc.config";
 import { useUserStore } from "~/store/user-store";
 import type { Route } from "../+types/root";
+import type { IProject } from "~/lib/types";
+import { Label } from "~/components/ui/label";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -21,13 +23,6 @@ const ConsolePage = () => {
   const trpc = useTRPC();
 
   const [showingCred, setShowingCred] = useState<boolean>(false);
-  const quickLinks = [
-    {
-      title: "Tables",
-      link: "/console/project_id/table",
-      icon: TableIcon,
-    },
-  ];
 
   const resumeDatabases = useMutation(
     trpc.dbInstanceRoutes.resumeDatabases.mutationOptions({
@@ -46,19 +41,7 @@ const ConsolePage = () => {
     })
   );
 
-  const [projectDetails, setProjectDetails] = useState<{
-    projectTitle: string;
-    projectDescription: string;
-    id: string;
-    updatedAt: string;
-    createdAt: string;
-    userId: string;
-    dbUser: string | null;
-    dbName: string | null;
-    dbDomain: string | null;
-    dbPassword: string | null;
-    dbSchema: string | null;
-  } | null>();
+  const [projectDetails, setProjectDetails] = useState<IProject | null>();
   const [cardDetails, setCardDetails] = useState<{
     [key: string]: {
       title: string;
@@ -110,48 +93,35 @@ const ConsolePage = () => {
       <header className="flex items-center h-14 bg-sidebar border-b w-full p-4">
         <p className="font-semibold">{projectDetails?.projectTitle}</p>
       </header>
-      <div className="p-4 space-y-8">
-        {" "}
+      <div className="p-4 space-y-8 h-full">
         <div className="bg-sidebar w-full rounded-md p-4 shadow-md border space-y-2">
-          <h2 className="text-lg font-semibold">Quick Links</h2>
-          <div className="">
-            {quickLinks?.map(({ title, link, icon: Icon }) => {
-              return (
-                <Link to={link.replace("project_id", project_id as string)}>
-                  <Button>
-                    <Icon /> {title}
-                  </Button>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-        <div className="bg-sidebar w-full rounded-md p-4 shadow-md border space-y-2">
-          <h2 className="text-lg font-semibold">Paused Databases</h2>
           {projectDetailsFromDb.data.project?.inactiveDatabases &&
             projectDetailsFromDb.data.project?.inactiveDatabases.length > 0 && (
-              <span className="flex flex-row items-center justify-between">
-                <span className="">
-                  We paused connections for your database{" "}
-                  <strong className="italic">
-                    {projectDetailsFromDb.data.project?.inactiveDatabases?.join(
-                      ", "
-                    )}
-                  </strong>
+              <>
+                <h2 className="text-lg font-semibold">Paused Databases</h2>
+                <span className="flex flex-row items-center justify-between">
+                  <span className="">
+                    We paused connections for your database{" "}
+                    <strong className="italic">
+                      {projectDetailsFromDb.data.project?.inactiveDatabases?.join(
+                        ", "
+                      )}
+                    </strong>
+                  </span>
+                  <Button
+                    onClick={() => {
+                      toast.loading("Resuming database", {
+                        id: "resume-db-state",
+                      });
+                      resumeDatabases.mutateAsync({
+                        projectId: project_id as string,
+                      });
+                    }}
+                  >
+                    Enable
+                  </Button>
                 </span>
-                <Button
-                  onClick={() => {
-                    toast.loading("Resuming database", {
-                      id: "resume-db-state",
-                    });
-                    resumeDatabases.mutateAsync({
-                      projectId: project_id as string,
-                    });
-                  }}
-                >
-                  Enable
-                </Button>
-              </span>
+              </>
             )}
           <h2 className="text-lg font-semibold">Connection Details</h2>
 
@@ -192,7 +162,20 @@ const ConsolePage = () => {
             )}
           </span>
         </div>
-        <div
+        <div className="flex gap-4 h-full ">
+          <div className="w-2/3 h-full flex flex-col gap-4">
+            <div className=" bg-sidebar w-full h-46 rounded-lg shadow-lg p-4">
+              <Label>Storage</Label>
+            </div>
+            <div className=" bg-sidebar w-full h-full rounded-lg shadow-lg p-4">
+              <Label>Analytics</Label>
+            </div>
+          </div>
+          <div className="w-1/3 bg-sidebar h-full rounded-lg min-w-32 overflow-x-auto p-4">
+            <Label>Network Access Control</Label>
+          </div>
+        </div>
+        {/* <div
           className="flex flex-row overflow-x-auto gap-4"
           style={{
             scrollbarWidth: "thin",
@@ -219,7 +202,7 @@ const ConsolePage = () => {
               );
             }
           )}
-        </div>
+        </div> */}
       </div>
     </>
   );

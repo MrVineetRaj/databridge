@@ -3,6 +3,12 @@ import { Pool, Client } from "pg";
 import format from "pg-format";
 import { envConf } from "../lib/envConf";
 import logger, { loggerMetadata } from "../lib/logger";
+import { execSync } from "child_process";
+import fs from "fs";
+import path from "path";
+import { cloudinaryServices } from "./cloudinary";
+import { db } from "../lib/db";
+import { UploadApiResponse } from "cloudinary";
 
 export const adminPool = new Pool({
   host: envConf.DATABASE_HOST,
@@ -648,6 +654,45 @@ WHERE con.contype = 'p'  -- 'p' = PRIMARY KEY
       throw err;
     } finally {
       client.release();
+    }
+  }
+
+  async createDatabaseBackup({
+    dbName,
+  }: {
+    dbName: string;
+  }): Promise<UploadApiResponse> {
+    const backupsDir = path.join(process.cwd(), "sql-dumps");
+    if (!fs.existsSync(backupsDir)) {
+      fs.mkdirSync(backupsDir, { recursive: true });
+    }
+
+    const backupFile = path.join(
+      backupsDir,
+      `${dbName}_backup_${Date.now()}.sql`
+    );
+
+    try {
+      execSync(
+        `docker exec -t databridge-database pg_dump -U ${envConf.DATABASE_ADMIN_USER} ${dbName} > "${backupFile}"`,
+        {
+          env: {
+            ...process.env,
+            PGPASSWORD: envConf.DATABASE_ADMIN_PASSWORD,
+          },
+          shell: "/bin/bash", // required for the redirection (">") to work
+        }
+      );
+
+      const cloudinaryResult =
+        await cloudinaryServices.uploadBackupToCloudinary({
+          backupFilePath: backupFile,
+        });
+
+      return cloudinaryResult.result;
+    } catch (err: any) {
+      console.error("pg_dump failed:", err.stderr?.toString() || err.message);
+      throw err;
     }
   }
 }

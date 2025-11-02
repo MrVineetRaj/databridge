@@ -64,14 +64,13 @@ export function ProjectForm({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <form>
-        <DialogTrigger asChild>
-          <Button
-            variant="outline"
-            className="w-full border-dashed border-2 outline-0"
-          >
-            <PlusIcon />
-            New Project
-          </Button>
+        <DialogTrigger
+          asChild
+          className="min-w-84 bg-sidebar min-h-48 flex items-center justify-center rounded-md hover:shadow-lg transition-all duration-300 border cursor-pointer"
+        >
+          <span>
+            <PlusIcon className="size-12" />
+          </span>
         </DialogTrigger>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>

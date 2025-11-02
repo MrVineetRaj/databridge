@@ -9,6 +9,8 @@ import format from "pg-format";
 import { dbInstanceJobQueue } from "../../../server";
 import { encryptionServices } from "../../services/encryption";
 import logger, { loggerMetadata } from "../../lib/logger";
+import { cloudinaryServices } from "../../services/cloudinary";
+import axios, { AxiosError } from "axios";
 
 export class Actions {
   async newProject(
@@ -73,10 +75,10 @@ export class Actions {
         userId: user.id,
       },
       select: {
-        dbPassword: false,
         projectTitle: true,
         projectDescription: true,
         id: true,
+        inactiveDatabases: true,
       },
     });
 
@@ -96,6 +98,10 @@ export class Actions {
         id: input.projectId,
       },
     });
+
+    if (!project) {
+      throw new Error("Project not found");
+    }
 
     const decryptedRes = encryptionServices.decrypt(project?.dbPassword!);
 
@@ -126,5 +132,77 @@ export class Actions {
       statusCode: 200,
       data: result,
     });
+  }
+
+  async getAllBackups(input: { projectId: string }, ctx: AuthedContext) {
+    const backups = await db.databaseBackups.findMany({
+      where: {
+        projectId: input.projectId,
+      },
+    });
+
+    return new ApiResponse<typeof backups>({
+      statusCode: 200,
+      message: "Loaded backups for project",
+      data: backups,
+    });
+  }
+
+  async downloadBackup(
+    input: { projectId: string; backupId: string },
+    ctx: AuthedContext
+  ) {
+    const { user } = ctx;
+
+    // Verify project belongs to user
+    const project = await db.project.findUnique({
+      where: {
+        id: input.projectId,
+        userId: user.id,
+      },
+    });
+
+    if (!project) {
+      throw new Error("Project not found");
+    }
+
+    // Get the backup record
+    const backup = await db.databaseBackups.findUnique({
+      where: {
+        id: input.backupId,
+        projectId: input.projectId,
+      },
+    });
+
+    if (!backup) {
+      throw new Error("Backup not found");
+    }
+
+    const publicId = backup.publicId;
+    const signedURL = await cloudinaryServices.singedURLforCloudinaryFile({
+      publicId,
+    });
+
+    const fileName = publicId.split("/").pop() || "backup.sql";
+
+    try {
+      const response = await axios.get(signedURL, {
+        responseType: "arraybuffer",
+      });
+
+      const buffer = Buffer.from(response.data);
+
+      return {
+        data: buffer.toString("base64"),
+        fileName,
+        contentType: "application/octet-stream",
+        contentLength: buffer.length,
+      };
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        console.error("Cloudinary error:", error.response?.data?.message);
+      }
+      throw new Error("Failed to download backup");
+    }
   }
 }
