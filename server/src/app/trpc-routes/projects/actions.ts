@@ -59,6 +59,16 @@ export class Actions {
         delay: 1000 * 60 * 60 * 24 * 30,
       }
     );
+    dbInstanceJobQueue.add(
+      "database_backup",
+      {
+        dbName: newProject.dbName,
+        projectId: newProject.id,
+      },
+      {
+        delay: 1000 * 60 * 60 * 24 * 7,
+      }
+    );
 
     return new ApiResponse({
       message: "Project created successfully",
@@ -138,6 +148,9 @@ export class Actions {
     const backups = await db.databaseBackups.findMany({
       where: {
         projectId: input.projectId,
+      },
+      orderBy: {
+        createdAt: "desc",
       },
     });
 

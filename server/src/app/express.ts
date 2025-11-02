@@ -13,7 +13,7 @@ import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { authRoutes } from "./routes/auth";
 import { appRouter } from "./trpc-routes";
 import { createTRPCContext } from "./trpc";
-import { notificationJobQueue } from "../server";
+import { dbInstanceJobQueue, notificationJobQueue } from "../server";
 import { adminPool, PostgresServices } from "./services/pg";
 import { AsyncHandler } from "./lib/api.helper";
 import axios, { AxiosError } from "axios";
@@ -142,64 +142,6 @@ export function createExpressApp(): Application {
     trpcExpress.createExpressMiddleware({
       router: appRouter,
       createContext: createTRPCContext,
-    })
-  );
-
-  app.get(
-    "/test",
-    AsyncHandler(async (req: Request, res: Response) => {
-      console.log(Date.now());
-      const pgService = new PostgresServices(adminPool);
-
-      const result = await pgService.createDatabaseBackup({
-        dbName: "verdict_150ad333_db",
-      });
-
-      await db.databaseBackups.create({
-        data: {
-          projectId: "cmhfyx8a50001i0iuzj4kf061",
-          dbName: "verdict_150ad333_db",
-          publicId: result.public_id,
-        },
-      });
-      res.json({
-        message: "Done",
-        result,
-      });
-    })
-  );
-
-  app.get(
-    "/test-2",
-    AsyncHandler(async (req: Request, res: Response) => {
-      const publicId =
-        "databridge/db_backups/verdict_150ad333_db_backup_1762089068749.sql.gz";
-      const signedURL = await cloudinaryServices.singedURLforCloudinaryFile({
-        publicId,
-      });
-
-      console.log({ signedURL });
-      const fileName = publicId.split("/").pop();
-      console.log({ fileName });
-      try {
-        const response = await axios.get(signedURL, {
-          responseType: "stream",
-        });
-        // Set headers so browser treats it as a file download
-        res.setHeader(
-          "Content-Disposition",
-          `attachment; filename="${fileName?.split(".")[0]}.gz"`
-        );
-        res.setHeader("Content-Type", "application/gzip");
-
-        // Pipe the Cloudinary stream to the response
-        response.data.pipe(res);
-      } catch (error) {
-        if (error instanceof AxiosError) {
-          console.log(error.response?.data?.message);
-        }
-        throw error;
-      }
     })
   );
 

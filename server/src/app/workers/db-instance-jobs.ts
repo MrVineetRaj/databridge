@@ -201,6 +201,35 @@ function initiateDbInstanceJobs({
         }
       }
     }
+
+    if (job_name == "database_backup") {
+      const { dbName, projectId } = job.data;
+
+      const pgService = new PostgresServices(adminPool);
+
+      const result = await pgService.createDatabaseBackup({
+        dbName: dbName,
+      });
+
+      await db.databaseBackups.create({
+        data: {
+          projectId: projectId,
+          dbName: dbName,
+          publicId: result.public_id,
+        },
+      });
+
+      dbInstanceJobQueue.add(
+        "database_backup",
+        {
+          dbName,
+          projectId,
+        },
+        {
+          delay: 1000 * 60 * 60 * 24 * 7,
+        }
+      );
+    }
   });
 
   queueEvents.on("completed", (job) => {
