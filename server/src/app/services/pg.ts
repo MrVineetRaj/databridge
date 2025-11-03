@@ -71,7 +71,7 @@ export class PostgresServices {
     try {
       // 1. Create the new user. We grant CREATEDB as requested for full capabilities.
       const createUserQuery = format(
-        "CREATE USER %I WITH PASSWORD %L CREATEDB NOCREATEUSER;",
+        "CREATE USER %I WITH PASSWORD %L CREATEDB;",
         dbUsername,
         dbPassword
       );
