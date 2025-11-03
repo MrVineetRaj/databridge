@@ -18,7 +18,6 @@
     // Other Outputs
     "sourceMap": true,
     "declaration": true,
-    "declarationDir": "./types",
     "declarationMap": true,
 
     // Stricter Typechecking Options
