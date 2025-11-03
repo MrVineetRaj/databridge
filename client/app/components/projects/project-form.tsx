@@ -66,10 +66,10 @@ export function ProjectForm({
       <form>
         <DialogTrigger
           asChild
-          className="min-w-84 bg-sidebar min-h-48 flex items-center justify-center rounded-md hover:shadow-lg transition-all duration-300 border cursor-pointer"
+          className="flex items-center bg-primary p-2 text-white text-sm font-semibold rounded-md btn"
         >
           <span>
-            <PlusIcon className="size-12" />
+            <PlusIcon className="size-6" /> New Project
           </span>
         </DialogTrigger>
         <DialogContent className="sm:max-w-[425px]">
