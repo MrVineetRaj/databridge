@@ -1,9 +1,32 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { CopyIcon, EyeClosedIcon, EyeIcon, TableIcon } from "lucide-react";
+import {
+  CopyIcon,
+  EyeClosedIcon,
+  EyeIcon,
+  TableIcon,
+  Database,
+  Activity,
+  HardDrive,
+  Shield,
+  Play,
+  AlertTriangle,
+  TrendingUp,
+  Wifi,
+  Lock,
+} from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
+import { Badge } from "~/components/ui/badge";
+import { Progress } from "~/components/ui/progress";
 import { Skeleton } from "~/components/ui/skeleton";
 import { useTRPC } from "~/lib/trpc.config";
 import { useUserStore } from "~/store/user-store";
@@ -13,10 +36,11 @@ import { Label } from "~/components/ui/label";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "New React Router App" },
-    { name: "description", content: "Welcome to React Router!" },
+    { title: "Project Dashboard | DataBridge" },
+    { name: "description", content: "Manage your database project" },
   ];
 }
+
 const ConsolePage = () => {
   const { project_id } = useParams();
   const { user } = useUserStore();
@@ -42,72 +66,95 @@ const ConsolePage = () => {
   );
 
   const [projectDetails, setProjectDetails] = useState<IProject | null>();
-  const [cardDetails, setCardDetails] = useState<{
-    [key: string]: {
-      title: string;
-      description: string;
-      val: string;
-    };
-  }>({
-    databases: {
-      title: "Databases",
-      description: "It is about number of databases in this project instances ",
-      val: "2",
-    },
-    storage: {
-      title: "Storage",
-      description:
-        "It is about how much storage is being used by databases in this project instances ",
-      val: "---",
-    },
-  });
 
   const { data: projectDetailsFromDb } = useQuery(
     trpc.projectRoutes.getProjectById.queryOptions({
       projectId: project_id as string,
     })
   );
+
   useEffect(() => {
     if (projectDetailsFromDb?.data) {
       setProjectDetails(projectDetailsFromDb?.data?.project);
-      setCardDetails({
-        ...cardDetails,
-        databases: {
-          ...cardDetails["databases"],
-          val: `${projectDetailsFromDb?.data?.detail.dbCnt}`,
-        },
-      });
     }
   }, [projectDetailsFromDb]);
 
   if (!projectDetailsFromDb?.data) {
     return (
-      <header className="flex items-center h-14 bg-sidebar border-b w-full p-4">
-        <Skeleton className="w-84 h-9 rounded-none" />
-      </header>
+      <div className="min-h-screen bg-gradient-to-br from-background via-accent to-secondary">
+        <header className="flex items-center h-16 bg-card/80 backdrop-blur-sm border-b border-border/50 px-6">
+          <Skeleton className="w-48 h-6" />
+        </header>
+        <div className="p-6 space-y-6">
+          <Skeleton className="w-full h-32" />
+          <div className="grid grid-cols-3 gap-6">
+            <Skeleton className="h-48" />
+            <Skeleton className="h-48" />
+            <Skeleton className="h-48" />
+          </div>
+        </div>
+      </div>
     );
   }
 
+  const isActive =
+    !projectDetailsFromDb.data.project?.inactiveDatabases.includes(
+      projectDetails?.dbName as string
+    );
+
+  // Mock data for demonstration
+  const storageUsed = 65; // percentage
+  const monthlyQueries = 12450;
+  const avgResponseTime = 23; // ms
+
   return (
-    <>
-      <header className="flex items-center h-14 bg-sidebar border-b w-full p-4">
-        <p className="font-semibold">{projectDetails?.projectTitle}</p>
+    <div className="min-h-screen bg-gradient-to-br from-background via-accent to-secondary">
+      {/* Header */}
+      <header className="sticky top-0 z-10 flex items-center justify-between h-16 bg-card/80 backdrop-blur-sm border-b border-border/50 px-6 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+            <Database className="w-4 h-4 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold text-foreground">
+              {projectDetails?.projectTitle}
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              ID: {projectDetails?.id.slice(0, 8)}...
+            </p>
+          </div>
+        </div>
+        <Badge variant={isActive ? "default" : "destructive"}>
+          {isActive ? "Active" : "Paused"}
+        </Badge>
       </header>
-      <div className="p-4 space-y-8 h-full">
-        <div className="bg-sidebar w-full rounded-md p-4 shadow-md border space-y-2">
-          {projectDetailsFromDb.data.project?.inactiveDatabases &&
-            projectDetailsFromDb.data.project?.inactiveDatabases.length > 0 && (
-              <>
-                <h2 className="text-lg font-semibold">Paused Databases</h2>
-                <span className="flex flex-row items-center justify-between">
-                  <span className="">
-                    We paused connections for your database{" "}
-                    <strong className="italic">
-                      {projectDetailsFromDb.data.project?.inactiveDatabases?.join(
-                        ", "
-                      )}
-                    </strong>
-                  </span>
+
+      <div className="p-6 space-y-6">
+        {/* Database Status Alert */}
+        {projectDetailsFromDb.data.project?.inactiveDatabases &&
+          projectDetailsFromDb.data.project?.inactiveDatabases.length > 0 && (
+            <Card className="border-destructive/50 bg-destructive/5">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-destructive/10 rounded-lg flex items-center justify-center">
+                      <AlertTriangle className="w-5 h-5 text-destructive" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-foreground">
+                        Database Paused
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Database{" "}
+                        <strong>
+                          {projectDetailsFromDb.data.project?.inactiveDatabases?.join(
+                            ", "
+                          )}
+                        </strong>{" "}
+                        is currently paused
+                      </p>
+                    </div>
+                  </div>
                   <Button
                     onClick={() => {
                       toast.loading("Resuming database", {
@@ -117,94 +164,217 @@ const ConsolePage = () => {
                         projectId: project_id as string,
                       });
                     }}
+                    className="bg-chart-2 hover:bg-chart-2/90"
                   >
-                    Enable
+                    <Play className="w-4 h-4 mr-2" />
+                    Resume Database
                   </Button>
-                </span>
-              </>
-            )}
-          <h2 className="text-lg font-semibold">Connection Details</h2>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-          <span className="flex  items-center gap-2">
-            {!projectDetailsFromDb.data.project?.inactiveDatabases.includes(
-              projectDetails?.dbName as string
-            ) && (
-              <>
-                <pre className="p-2 bg-background border rounded-md w-full text-sm text-muted-foreground text-wrap">{`postgres://${
-                  showingCred ? projectDetails?.dbUser : "<********>"
-                }:${showingCred ? projectDetails?.dbPassword : "<********>"}@${
-                  projectDetails?.dbDomain
-                }/${projectDetails?.dbName}`}</pre>
+        {/* Connection Details */}
+        {isActive && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="w-5 h-5" />
+                Connection Details
+              </CardTitle>
+              <CardDescription>
+                Use these credentials to connect your applications
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="flex-1 p-3 bg-muted rounded-lg font-mono text-sm">
+                  postgres://{showingCred ? projectDetails?.dbUser : "********"}
+                  :{showingCred ? projectDetails?.dbPassword : "********"}@
+                  {projectDetails?.dbDomain}/{projectDetails?.dbName}
+                </div>
                 <Button
-                  variant={"outline"}
-                  onClick={() => {
-                    setShowingCred((prev) => !prev);
-                  }}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowingCred(!showingCred)}
                 >
-                  {!showingCred ? (
-                    <EyeClosedIcon className="size-4" />
+                  {showingCred ? (
+                    <EyeIcon className="w-4 h-4" />
                   ) : (
-                    <EyeIcon />
+                    <EyeClosedIcon className="w-4 h-4" />
                   )}
                 </Button>
                 <Button
-                  variant={"outline"}
+                  variant="outline"
+                  size="sm"
                   onClick={() => {
-                    toast.success("Copied to clipboard!", { duration: 2000 });
                     navigator.clipboard.writeText(
-                      `postgres://${projectDetails?.dbUser}:${projectDetails?.dbPassword}@${projectDetails?.dbDomain}/${projectDetails?.dbName}?`
+                      `postgres://${projectDetails?.dbUser}:${projectDetails?.dbPassword}@${projectDetails?.dbDomain}/${projectDetails?.dbName}`
                     );
+                    toast.success("Copied to clipboard!");
                   }}
                 >
-                  <CopyIcon />
+                  <CopyIcon className="w-4 h-4" />
                 </Button>
-              </>
-            )}
-          </span>
-        </div>
-        <div className="flex gap-4 h-full ">
-          <div className="w-2/3 h-full flex flex-col gap-4">
-            <div className=" bg-sidebar w-full h-46 rounded-lg shadow-lg p-4">
-              <Label>Storage</Label>
-            </div>
-            <div className=" bg-sidebar w-full h-full rounded-lg shadow-lg p-4">
-              <Label>Analytics</Label>
-            </div>
-          </div>
-          <div className="w-1/3 bg-sidebar h-full rounded-lg min-w-32 overflow-x-auto p-4">
-            <Label>Network Access Control</Label>
-          </div>
-        </div>
-        {/* <div
-          className="flex flex-row overflow-x-auto gap-4"
-          style={{
-            scrollbarWidth: "thin",
-          }}
-        >
-          {Object.values(cardDetails)?.map(
-            ({ title, description, val }, idx) => {
-              return (
-                <div
-                  className="bg-chart-4/70 max-w-84 min-w-84 flex-col p-4 rounded-md shadow-lg relative"
-                  key={idx}
-                >
-                  <h2 className="font-bold text-xl">{title}</h2>
-                  <p className="text-muted-foreground text-sm italic">
-                    {description}
-                  </p>
-                  <h1 className="text-3xl font-bold w-full text-right mt-2">
-                    {val}
-                  </h1>
-                  <span className="absolute  size-4 bg-red-300/80 rounded-full top-4 right-4 flex items-center justify-center  animate-pulse">
-                    <span className="block size-2 bg-red-500 rounded-full animate-pulse "></span>
-                  </span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Main Dashboard Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Storage Section */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <HardDrive className="w-5 h-5" />
+                Storage Usage
+              </CardTitle>
+              <CardDescription>
+                Monitor your database storage consumption
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Used Storage</span>
+                  <span className="font-medium">{storageUsed}% of 1GB</span>
                 </div>
-              );
-            }
-          )}
-        </div> */}
+                <Progress value={storageUsed} className="h-3" />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4 pt-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-foreground">650MB</p>
+                  <p className="text-xs text-muted-foreground">Used</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-chart-2">350MB</p>
+                  <p className="text-xs text-muted-foreground">Available</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-chart-4">
+                    {projectDetailsFromDb?.data?.detail.dbCnt}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Databases</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Network Access Control */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="w-5 h-5" />
+                Network Access
+              </CardTitle>
+              <CardDescription>Manage database access rules</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Wifi className="w-4 h-4 text-chart-2" />
+                    <span className="text-sm font-medium">Public Access</span>
+                  </div>
+                  <Badge
+                    variant="secondary"
+                    className="bg-chart-2/10 text-chart-2"
+                  >
+                    Enabled
+                  </Badge>
+                </div>
+
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">IP Whitelist</span>
+                  </div>
+                  <Badge variant="outline">0 Rules</Badge>
+                </div>
+              </div>
+
+              <Button variant="outline" className="w-full">
+                Configure Access Rules
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Analytics Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="w-5 h-5" />
+              Database Analytics
+            </CardTitle>
+            <CardDescription>
+              Performance metrics and usage statistics
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              {/* Stats Cards */}
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Monthly Queries</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {monthlyQueries.toLocaleString()}
+                </p>
+                <div className="flex items-center gap-1 text-xs">
+                  <TrendingUp className="w-3 h-3 text-chart-2" />
+                  <span className="text-chart-2">+12% from last month</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Avg Response Time
+                </p>
+                <p className="text-2xl font-bold text-foreground">
+                  {avgResponseTime}ms
+                </p>
+                <div className="flex items-center gap-1 text-xs">
+                  <TrendingUp className="w-3 h-3 text-chart-3" />
+                  <span className="text-chart-3">-5% improvement</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Active Connections
+                </p>
+                <p className="text-2xl font-bold text-foreground">8</p>
+                <div className="flex items-center gap-1 text-xs">
+                  <div className="w-2 h-2 bg-chart-2 rounded-full animate-pulse"></div>
+                  <span className="text-muted-foreground">Live</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Uptime</p>
+                <p className="text-2xl font-bold text-foreground">99.9%</p>
+                <div className="flex items-center gap-1 text-xs">
+                  <div className="w-2 h-2 bg-chart-2 rounded-full"></div>
+                  <span className="text-muted-foreground">30 days</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Chart Placeholder */}
+            <div className="mt-6 h-48 bg-muted/30 rounded-lg flex items-center justify-center border-2 border-dashed border-border">
+              <div className="text-center">
+                <Activity className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">Analytics Chart</p>
+                <p className="text-xs text-muted-foreground">
+                  Query performance over time
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </>
+    </div>
   );
 };
 
