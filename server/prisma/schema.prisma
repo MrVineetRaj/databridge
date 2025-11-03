@@ -49,6 +49,7 @@ model Project {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId],references: [id],onDelete: Cascade)
+  dbBackups DatabaseBackups[]
 }
 
 model DiscordIntegration{
@@ -62,3 +63,14 @@ model DiscordIntegration{
   user User @relation(fields: [userId] , references: [id] , onDelete: Cascade)
 }
 
+
+model DatabaseBackups{
+  id String @id @default(cuid())
+  projectId String 
+  dbName String 
+  publicId String
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId],references: [id],onDelete: Cascade)
+}

@@ -24,6 +24,21 @@ export function registerRoutes() {
         })
       )
       .query(TRPCAsyncHandler(actions.getProjectById.bind(actions))),
+    getBackups: protectedProcedure
+      .input(
+        z.object({
+          projectId: z.string(),
+        })
+      )
+      .query(TRPCAsyncHandler(actions.getAllBackups.bind(actions))),
+    downloadBackup: protectedProcedure
+      .input(
+        z.object({
+          projectId: z.string(),
+          backupId: z.string(),
+        })
+      )
+      .mutation(TRPCAsyncHandler(actions.downloadBackup.bind(actions))),
   });
 
   return projectRoutes;

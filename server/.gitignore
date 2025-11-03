@@ -1,5 +1,8 @@
 node_modules
 dist
 .env
+.env.final
 logs
 /src/generated/prisma
+
+sql-dumps

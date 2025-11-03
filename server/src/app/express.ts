@@ -13,7 +13,12 @@ import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { authRoutes } from "./routes/auth";
 import { appRouter } from "./trpc-routes";
 import { createTRPCContext } from "./trpc";
-import { notificationJobQueue } from "../server";
+import { dbInstanceJobQueue, notificationJobQueue } from "../server";
+import { adminPool, PostgresServices } from "./services/pg";
+import { AsyncHandler } from "./lib/api.helper";
+import axios, { AxiosError } from "axios";
+import { cloudinaryServices } from "./services/cloudinary";
+import { db } from "./lib/db";
 
 /**
  * Creates and configures an Express application instance.
@@ -139,18 +144,6 @@ export function createExpressApp(): Application {
       createContext: createTRPCContext,
     })
   );
-
-  app.get("/test", (req: Request, res: Response) => {
-    console.log(Date.now());
-    const job = notificationJobQueue.add("welcome_mail", {
-      username: "Vineet Raj",
-      email: "vineetrajrj26@gmail.com",
-    });
-
-    res.json({
-      message: "Done",
-    });
-  });
 
   return app;
 }

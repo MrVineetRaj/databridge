@@ -137,62 +137,66 @@ const TablePage = () => {
   }
 
   return (
-    <div className="p-4 space-y-2">
-      <Label>Databases</Label>
-      <Tabs value={databases?.data[selectedDatabase]}>
-        <TabsList className="flex gap-2">
-          {databases?.data?.map((db: string, idx) => {
-            return (
-              <TabsTrigger
-                key={idx}
-                value={db}
-                onClick={() => {
-                  setSelectedDatabase(idx);
-                }}
-              >
-                {db}
-              </TabsTrigger>
-            );
-          })}
-        </TabsList>
+    <>
+      <header className="flex items-center h-14 bg-sidebar border-b w-full p-4">
+        <p className="font-semibold">{"Table Page"}</p>
+      </header>
+      <div className="p-4 space-y-2">
+        <Label>Databases</Label>
+        <Tabs value={databases?.data[selectedDatabase]}>
+          <TabsList className="flex gap-2">
+            {databases?.data?.map((db: string, idx) => {
+              return (
+                <TabsTrigger
+                  key={idx}
+                  value={db}
+                  onClick={() => {
+                    setSelectedDatabase(idx);
+                  }}
+                >
+                  {db}
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
 
-        <Label className="mt-4">Tables</Label>
-        {databases?.data?.map((db: string, indexNum) => {
-          if (!tables?.data || tables?.data?.length <= 0)
+          <Label className="mt-4">Tables</Label>
+          {databases?.data?.map((db: string, indexNum) => {
+            if (!tables?.data || tables?.data?.length <= 0)
+              return (
+                <p className="italic text-foreground-muted" key={indexNum}>
+                  No tables found in this database
+                </p>
+              );
             return (
-              <p className="italic text-foreground-muted" key={indexNum}>
-                No tables found in this database
-              </p>
-            );
-          return (
-            <TabsContent value={db} key={db}>
-              {tables?.data && (
-                <Tabs value={tables?.data[selectedTable]?.tableName}>
-                  <TabsList className="flex gap-2">
-                    {tables?.data?.map(
-                      (
-                        table: { tableName: string; primaryKey: string },
-                        idx
-                      ) => {
-                        return (
-                          <TabsTrigger
-                            key={table?.tableName}
-                            value={table?.tableName}
-                            onClick={() => {
-                              setSelectedTable(idx);
-                            }}
-                          >
-                            {table?.tableName}
-                          </TabsTrigger>
-                        );
-                      }
-                    )}
-                  </TabsList>
-                  {/* <p
+              <TabsContent value={db} key={db}>
+                {tables?.data && (
+                  <Tabs value={tables?.data[selectedTable]?.tableName}>
+                    <TabsList className="flex gap-2">
+                      {tables?.data?.map(
+                        (
+                          table: { tableName: string; primaryKey: string },
+                          idx
+                        ) => {
+                          return (
+                            <TabsTrigger
+                              key={table?.tableName}
+                              value={table?.tableName}
+                              onClick={() => {
+                                setSelectedTable(idx);
+                              }}
+                            >
+                              {table?.tableName}
+                            </TabsTrigger>
+                          );
+                        }
+                      )}
+                    </TabsList>
+                    {/* <p
                     onClick={() => {
                       toast.loading("Deleting item", {
                         id: "delete-message",
-                      });
+                        });
                       deleteItemFromTable.mutateAsync({
                         tableName: "User",
                         primaryKey: "id",
@@ -202,74 +206,75 @@ const TablePage = () => {
                       });
                     }}
                   >
-                    Delete
+                  Delete
                   </p> */}
 
-                  {loadingTableContent ? (
-                    <p>Loading Content</p>
-                  ) : tableContent?.data?.data &&
-                    tableContent?.data?.data.length > 0 ? (
-                    <TableContent
-                      handleDeleteQuery={({ primaryKeyValues }) => {
-                        if (
-                          !databases.data ||
-                          !tables.data ||
-                          tables.data.length <= 0 ||
-                          databases.data.length <= 0
-                        ) {
-                          toast.warning("Refresh the page please", {
+                    {loadingTableContent ? (
+                      <p>Loading Content</p>
+                    ) : tableContent?.data?.data &&
+                      tableContent?.data?.data.length > 0 ? (
+                      <TableContent
+                        handleDeleteQuery={({ primaryKeyValues }) => {
+                          if (
+                            !databases.data ||
+                            !tables.data ||
+                            tables.data.length <= 0 ||
+                            databases.data.length <= 0
+                          ) {
+                            toast.warning("Refresh the page please", {
+                              id: "table-query",
+                              duration: 3000,
+                            });
+                            return;
+                          }
+
+                          toast.loading("Deleting selected rows", {
                             id: "table-query",
-                            duration: 3000,
                           });
-                          return;
-                        }
+                          deleteItemFromTable.mutateAsync({
+                            tableName: tables.data[selectedTable].tableName,
+                            primaryKey: tables.data[selectedTable].primaryKey,
+                            primaryKeyValues,
+                            dbName: databases.data[selectedDatabase],
+                            projectId: project_id as string,
+                          });
+                        }}
+                        handleSaveChanges={(val) => {
+                          saveChanges.mutateAsync({
+                            dbName: databases.data![selectedDatabase],
+                            primaryKey: tables?.data![selectedTable].primaryKey,
+                            tableName: tables?.data![selectedTable].tableName,
+                            projectId: project_id as string,
+                            sqlQueryObj: val,
+                          });
+                        }}
+                        data={tableContentToBeDisplayed}
+                        primaryKey={tables.data[selectedTable].primaryKey}
+                        handleRunQuery={(val) => {
+                          console.log("val", val);
+                          toast.loading("Running SQL Query", {
+                            id: "table-query",
+                          });
+                          runSqlQuery.mutateAsync({
+                            dbName: databases.data![selectedDatabase],
 
-                        toast.loading("Deleting selected rows", {
-                          id: "table-query",
-                        });
-                        deleteItemFromTable.mutateAsync({
-                          tableName: tables.data[selectedTable].tableName,
-                          primaryKey: tables.data[selectedTable].primaryKey,
-                          primaryKeyValues,
-                          dbName: databases.data[selectedDatabase],
-                          projectId: project_id as string,
-                        });
-                      }}
-                      handleSaveChanges={(val) => {
-                        saveChanges.mutateAsync({
-                          dbName: databases.data![selectedDatabase],
-                          primaryKey: tables?.data![selectedTable].primaryKey,
-                          tableName: tables?.data![selectedTable].tableName,
-                          projectId: project_id as string,
-                          sqlQueryObj: val,
-                        });
-                      }}
-                      data={tableContentToBeDisplayed}
-                      primaryKey={tables.data[selectedTable].primaryKey}
-                      handleRunQuery={(val) => {
-                        console.log("val", val);
-                        toast.loading("Running SQL Query", {
-                          id: "table-query",
-                        });
-                        runSqlQuery.mutateAsync({
-                          dbName: databases.data![selectedDatabase],
-
-                          tableName: tables?.data![selectedTable].tableName,
-                          projectId: project_id as string,
-                          sqlQueryObj: val,
-                        });
-                      }}
-                    />
-                  ) : (
-                    "No content"
-                  )}
-                </Tabs>
-              )}
-            </TabsContent>
-          );
-        })}
-      </Tabs>
-    </div>
+                            tableName: tables?.data![selectedTable].tableName,
+                            projectId: project_id as string,
+                            sqlQueryObj: val,
+                          });
+                        }}
+                      />
+                    ) : (
+                      "No content"
+                    )}
+                  </Tabs>
+                )}
+              </TabsContent>
+            );
+          })}
+        </Tabs>
+      </div>
+    </>
   );
 };
 
