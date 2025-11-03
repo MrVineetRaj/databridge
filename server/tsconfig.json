@@ -42,5 +42,7 @@
     "moduleDetection": "force",
     "skipLibCheck": true
   },
-  "exclude": ["./logs", "./node_modules", "./sql-dumps"]
+  "exclude": ["./logs", "./node_modules", "./sql-dumps"],
+
+  "include": ["src/**/*"]
 }

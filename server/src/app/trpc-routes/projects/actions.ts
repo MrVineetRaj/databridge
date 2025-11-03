@@ -45,7 +45,7 @@ export class Actions {
         dbUser: dbInfo.dbUsername, // Store the generated username
         dbPassword: encryptedPassword,
         dbName: dbInfo.dbName,
-        dbDomain: "localhost:5432",
+        dbDomain: envConf.DATABASE_HOST,
       },
     });
 

@@ -11,8 +11,8 @@ import { db } from "../lib/db";
 import { UploadApiResponse } from "cloudinary";
 
 export const adminPool = new Pool({
-  host: envConf.DATABASE_HOST,
-  port: +envConf.DATABASE_PORT!,
+  host: "localhost",
+  port: 5432,
   user: envConf.DATABASE_ADMIN_USER,
   password: envConf.DATABASE_ADMIN_PASSWORD,
   database: "postgres", // Connect to the default 'postgres' db to run CREATE DATABASE
@@ -71,7 +71,7 @@ export class PostgresServices {
     try {
       // 1. Create the new user. We grant CREATEDB as requested for full capabilities.
       const createUserQuery = format(
-        "CREATE USER %I WITH PASSWORD %L CREATEDB;",
+        "CREATE USER %I WITH PASSWORD %L CREATEDB NOCREATEUSER;",
         dbUsername,
         dbPassword
       );
