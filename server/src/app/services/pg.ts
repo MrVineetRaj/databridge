@@ -789,10 +789,10 @@ WHERE con.contype = 'p'  -- 'p' = PRIMARY KEY
     dbPassword: string;
   }) {
     const client = new Client({
-      user: dbUserName,
+      user: envConf.DATABASE_ADMIN_USER,
       host: "localhost",
       database: dbName,
-      password: dbPassword,
+      password: envConf.DATABASE_ADMIN_PASSWORD,
       port: 5432,
     });
 
@@ -830,6 +830,7 @@ ORDER BY total_calls ASC;
         ),
       });
     } catch (error: any) {
+      console.log(error);
       if (error.message.includes("pg_stat_statements")) {
         logger.warn(
           `pg_stat_statements not enabled for ${dbName} (user ${dbUserName})`
