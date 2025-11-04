@@ -15,10 +15,14 @@ import { appRouter } from "./trpc-routes";
 import { createTRPCContext } from "./trpc";
 import { dbInstanceJobQueue, notificationJobQueue } from "../server";
 import { adminPool, PostgresServices } from "./services/pg";
-import { AsyncHandler } from "./lib/api.helper";
+import { ApiResponse, AsyncHandler } from "./lib/api.helper";
 import axios, { AxiosError } from "axios";
 import { cloudinaryServices } from "./services/cloudinary";
 import { db } from "./lib/db";
+import { email } from "zod";
+import { encryptionServices } from "./services/encryption";
+import { env } from "process";
+import { UserRole } from "../generated/prisma";
 
 /**
  * Creates and configures an Express application instance.
@@ -144,6 +148,44 @@ export function createExpressApp(): Application {
       createContext: createTRPCContext,
     })
   );
+
+  
+  // app.get("/test", async (req: Request, res: Response) => {
+  //   const admin = await db.user.upsert({
+  //     where: {
+  //       email: "vineetrajrj26@gmail.com",
+  //     },
+  //     update: {},
+  //     create: {
+  //       email: "vineetrajrj26@gmail.com",
+  //       name: "Vineet Raj",
+  //       role: UserRole.ADMIN,
+  //     },
+  //   });
+
+  //   const project = await db.project.create({
+  //     data: {
+  //       dbUser: envConf.DATABASE_ADMIN_USER,
+  //       dbPassword: encryptionServices.encrypt(envConf.DATABASE_ADMIN_PASSWORD),
+  //       projectTitle: "DataBridge",
+  //       projectDescription: "DBaaS Platform",
+  //       userId: admin.id,
+  //       dbDomain: envConf.DATABASE_HOST,
+  //       dbName: "databridge",
+  //     },
+  //   });
+
+  //   const pgService = new PostgresServices(adminPool);
+
+  //   pgService.adminInitialization({ dbName: "databridge" });
+
+  //   res.json(
+  //     new ApiResponse({
+  //       message: "Success",
+  //       statusCode: 200,
+  //     })
+  //   );
+  // });
 
   return app;
 }

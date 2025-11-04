@@ -33,6 +33,8 @@ import { useUserStore } from "~/store/user-store";
 import type { Route } from "../+types/root";
 import type { IProject } from "~/lib/types";
 import { Label } from "~/components/ui/label";
+import { DatabaseAnalytics } from "~/components/projects/analytics-page";
+import { calculateStoragePercentage, parseBigNumber, parseBigStorage } from "~/lib/utils";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -67,21 +69,22 @@ const ConsolePage = () => {
 
   const [projectDetails, setProjectDetails] = useState<IProject | null>();
 
-  const { data: projectDetailsFromDb } = useQuery(
-    trpc.projectRoutes.getProjectById.queryOptions({
+  const { data: dashboardData } = useQuery(
+    trpc.dbInstanceRoutes.getDashboardData.queryOptions({
       projectId: project_id as string,
     })
   );
 
   useEffect(() => {
-    if (projectDetailsFromDb?.data) {
-      setProjectDetails(projectDetailsFromDb?.data?.project);
+    console.log(dashboardData);
+    if (dashboardData?.data?.project) {
+      setProjectDetails(dashboardData?.data?.project);
     }
-  }, [projectDetailsFromDb]);
+  }, [dashboardData?.data?.project]);
 
-  if (!projectDetailsFromDb?.data) {
+  if (!dashboardData?.data?.project) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-accent to-secondary">
+      <div className="min-h-screen bg-linear-to-br from-background via-accent to-secondary">
         <header className="flex items-center h-16 bg-card/80 backdrop-blur-sm border-b border-border/50 px-6">
           <Skeleton className="w-48 h-6" />
         </header>
@@ -97,10 +100,9 @@ const ConsolePage = () => {
     );
   }
 
-  const isActive =
-    !projectDetailsFromDb.data.project?.inactiveDatabases.includes(
-      projectDetails?.dbName as string
-    );
+  const isActive = !dashboardData?.data?.project?.inactiveDatabases.includes(
+    dashboardData?.data?.project?.dbName as string
+  );
 
   // Mock data for demonstration
   const storageUsed = 65; // percentage
@@ -108,7 +110,7 @@ const ConsolePage = () => {
   const avgResponseTime = 23; // ms
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-accent to-secondary">
+    <div className="min-h-screen bg-linear-to-br from-background via-accent to-secondary">
       {/* Header */}
       <header className="sticky top-0 z-10 flex items-center justify-between h-16 bg-card/80 backdrop-blur-sm border-b border-border/50 px-6 shadow-sm">
         <div className="flex items-center gap-3">
@@ -131,8 +133,8 @@ const ConsolePage = () => {
 
       <div className="p-6 space-y-6">
         {/* Database Status Alert */}
-        {projectDetailsFromDb.data.project?.inactiveDatabases &&
-          projectDetailsFromDb.data.project?.inactiveDatabases.length > 0 && (
+        {dashboardData?.data?.project?.inactiveDatabases &&
+          dashboardData?.data?.project?.inactiveDatabases.length > 0 && (
             <Card className="border-destructive/50 bg-destructive/5">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
@@ -147,7 +149,7 @@ const ConsolePage = () => {
                       <p className="text-sm text-muted-foreground">
                         Database{" "}
                         <strong>
-                          {projectDetailsFromDb.data.project?.inactiveDatabases?.join(
+                          {dashboardData?.data?.project?.inactiveDatabases?.join(
                             ", "
                           )}
                         </strong>{" "}
@@ -174,52 +176,61 @@ const ConsolePage = () => {
             </Card>
           )}
 
-        {/* Connection Details */}
-        {isActive && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Database className="w-5 h-5" />
-                Connection Details
-              </CardTitle>
-              <CardDescription>
-                Use these credentials to connect your applications
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="flex-1 p-3 bg-muted rounded-lg font-mono text-sm">
-                  postgres://{showingCred ? projectDetails?.dbUser : "********"}
-                  :{showingCred ? projectDetails?.dbPassword : "********"}@
-                  {projectDetails?.dbDomain}/{projectDetails?.dbName}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowingCred(!showingCred)}
-                >
-                  {showingCred ? (
-                    <EyeIcon className="w-4 h-4" />
-                  ) : (
-                    <EyeClosedIcon className="w-4 h-4" />
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    navigator.clipboard.writeText(
-                      `postgres://${projectDetails?.dbUser}:${projectDetails?.dbPassword}@${projectDetails?.dbDomain}/${projectDetails?.dbName}`
-                    );
-                    toast.success("Copied to clipboard!");
-                  }}
-                >
-                  <CopyIcon className="w-4 h-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+
+{/* Connection Details */}
+{isActive && (
+  <Card>
+    <CardHeader>
+      <CardTitle className="flex items-center gap-2">
+        <Database className="w-5 h-5" />
+        Connection Details
+      </CardTitle>
+      <CardDescription>
+        Use these credentials to connect your applications
+      </CardDescription>
+    </CardHeader>
+    <CardContent className="space-y-4">
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">Connection String</Label>
+        <div className="flex items-start gap-2">
+          <div className="flex-1 p-3 bg-muted rounded-lg font-mono text-sm overflow-hidden">
+            <div className="break-all whitespace-pre-wrap">
+              postgres://{showingCred ? projectDetails?.dbUser : "********"}
+              :{showingCred ? projectDetails?.dbPassword : "********"}@
+              {projectDetails?.dbDomain}/{projectDetails?.dbName}
+            </div>
+          </div>
+          <div className="flex flex-col gap-1 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowingCred(!showingCred)}
+            >
+              {showingCred ? (
+                <EyeIcon className="w-4 h-4" />
+              ) : (
+                <EyeClosedIcon className="w-4 h-4" />
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                navigator.clipboard.writeText(
+                  `postgres://${projectDetails?.dbUser}:${projectDetails?.dbPassword}@${projectDetails?.dbDomain}/${projectDetails?.dbName}`
+                );
+                toast.success("Copied to clipboard!");
+              }}
+            >
+              <CopyIcon className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+    </CardContent>
+  </Card>
+)}
 
         {/* Main Dashboard Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -238,23 +249,36 @@ const ConsolePage = () => {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Used Storage</span>
-                  <span className="font-medium">{storageUsed}% of 1GB</span>
+                  <span className="font-medium">
+                    {parseBigStorage(
+                      dashboardData?.data?.resourceUsage?.storage
+                    )}{" "}
+                    of 2GB
+                  </span>
                 </div>
-                <Progress value={storageUsed} className="h-3" />
+                <Progress value={calculateStoragePercentage(dashboardData?.data?.resourceUsage?.storage,2)} className="h-3" />
               </div>
 
               <div className="grid grid-cols-3 gap-4 pt-4">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-foreground">650MB</p>
-                  <p className="text-xs text-muted-foreground">Used</p>
+                  <p className="text-2xl font-bold text-chart-2">
+                    {parseBigNumber(
+                      dashboardData?.data?.resourceUsage?.totalOperations
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Total Operations
+                  </p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-chart-2">350MB</p>
-                  <p className="text-xs text-muted-foreground">Available</p>
+                  <p className="text-2xl font-bold text-chart-2">
+                    {dashboardData?.data?.resourceUsage?.activeConnections}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Connections</p>
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold text-chart-4">
-                    {projectDetailsFromDb?.data?.detail.dbCnt}
+                    {dashboardData?.data?.project.dbCnt}
                   </p>
                   <p className="text-xs text-muted-foreground">Databases</p>
                 </div>
@@ -309,68 +333,9 @@ const ConsolePage = () => {
               <Activity className="w-5 h-5" />
               Database Analytics
             </CardTitle>
-            <CardDescription>
-              Performance metrics and usage statistics
-            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              {/* Stats Cards */}
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Monthly Queries</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {monthlyQueries.toLocaleString()}
-                </p>
-                <div className="flex items-center gap-1 text-xs">
-                  <TrendingUp className="w-3 h-3 text-chart-2" />
-                  <span className="text-chart-2">+12% from last month</span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Avg Response Time
-                </p>
-                <p className="text-2xl font-bold text-foreground">
-                  {avgResponseTime}ms
-                </p>
-                <div className="flex items-center gap-1 text-xs">
-                  <TrendingUp className="w-3 h-3 text-chart-3" />
-                  <span className="text-chart-3">-5% improvement</span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Active Connections
-                </p>
-                <p className="text-2xl font-bold text-foreground">8</p>
-                <div className="flex items-center gap-1 text-xs">
-                  <div className="w-2 h-2 bg-chart-2 rounded-full animate-pulse"></div>
-                  <span className="text-muted-foreground">Live</span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Uptime</p>
-                <p className="text-2xl font-bold text-foreground">99.9%</p>
-                <div className="flex items-center gap-1 text-xs">
-                  <div className="w-2 h-2 bg-chart-2 rounded-full"></div>
-                  <span className="text-muted-foreground">30 days</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Chart Placeholder */}
-            <div className="mt-6 h-48 bg-muted/30 rounded-lg flex items-center justify-center border-2 border-dashed border-border">
-              <div className="text-center">
-                <Activity className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">Analytics Chart</p>
-                <p className="text-xs text-muted-foreground">
-                  Query performance over time
-                </p>
-              </div>
-            </div>
+            <DatabaseAnalytics data={dashboardData?.data?.analytics} />
           </CardContent>
         </Card>
       </div>

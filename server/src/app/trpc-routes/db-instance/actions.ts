@@ -28,7 +28,7 @@ export class Actions {
       platformUsername: project?.dbUser!,
     });
 
-    const result = dbNames;
+    const result = dbNames.map((it) => it.datname);
     return new ApiResponse<typeof result>({
       message: "Project fetched successfully",
       statusCode: 200,
@@ -448,6 +448,59 @@ WHERE t.%I = u.%I;
     return new ApiResponse({
       statusCode: 200,
       message: `Databases ${project?.inactiveDatabases?.join(", ")} resume`,
+    });
+  }
+
+  async getDashboardData(input: { projectId: string }, ctx: AuthedContext) {
+    const project = await db.project.findUnique({
+      where: {
+        id: input.projectId,
+        userId: ctx.user.id,
+      },
+    });
+
+    if (!project) {
+      logger.error("Project not found", {
+        projectId: input.projectId,
+        userId: ctx.user.id,
+      });
+      throw new Error("Project not found");
+      return;
+    }
+
+    const pgService = new PostgresServices(adminPool);
+    const databasesResources = await pgService.getDatabasesForUser({
+      platformUsername: project?.dbUser!,
+    });
+    const analytics = await pgService.getAnalytics({
+      dbName: project.dbName!,
+      dbPassword: encryptionServices.decrypt(project.dbPassword!).result,
+      dbUserName: project.dbUser!,
+    });
+
+    const result = {
+      project: {
+        ...project,
+        dbCnt: databasesResources.length,
+      },
+      analytics: analytics.data || [],
+      resourceUsage: {
+        storage: databasesResources.reduce((acc, it) => acc + +it.sizeBytes, 0),
+        activeConnections: databasesResources.reduce(
+          (acc, it) => acc + +it.activeConnections,
+          0
+        ),
+        totalOperations: databasesResources.reduce(
+          (acc, it) => acc + +it.totalOperations,
+          0
+        ),
+      },
+    };
+
+    return new ApiResponse<typeof result>({
+      message: "Dashboard Data fetched",
+      statusCode: 200,
+      data: result,
     });
   }
 }

@@ -85,3 +85,9 @@ cron.schedule("0 0 */7 * *", async () => {
     dbInstanceJobQueue.add("pause_db_connection", { ...databaseData });
   });
 });
+
+cron.schedule("0 0 * * *", async () => {
+  const pgService = new PostgresServices(adminPool);
+
+  await pgService.resetAllAnalytics();
+});

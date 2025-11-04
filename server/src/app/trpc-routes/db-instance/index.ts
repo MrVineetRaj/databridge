@@ -84,6 +84,13 @@ export function registerRoutes() {
         })
       )
       .mutation(TRPCAsyncHandler(actions.resumeDatabases.bind(actions))),
+    getDashboardData: protectedProcedure
+      .input(
+        z.object({
+          projectId: z.string(),
+        })
+      )
+      .query(TRPCAsyncHandler(actions.getDashboardData.bind(actions))),
   });
 
   return dbInstanceRoutes;
