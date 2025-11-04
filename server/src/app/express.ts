@@ -149,43 +149,5 @@ export function createExpressApp(): Application {
     })
   );
 
-  
-  // app.get("/test", async (req: Request, res: Response) => {
-  //   const admin = await db.user.upsert({
-  //     where: {
-  //       email: "vineetrajrj26@gmail.com",
-  //     },
-  //     update: {},
-  //     create: {
-  //       email: "vineetrajrj26@gmail.com",
-  //       name: "Vineet Raj",
-  //       role: UserRole.ADMIN,
-  //     },
-  //   });
-
-  //   const project = await db.project.create({
-  //     data: {
-  //       dbUser: envConf.DATABASE_ADMIN_USER,
-  //       dbPassword: encryptionServices.encrypt(envConf.DATABASE_ADMIN_PASSWORD),
-  //       projectTitle: "DataBridge",
-  //       projectDescription: "DBaaS Platform",
-  //       userId: admin.id,
-  //       dbDomain: envConf.DATABASE_HOST,
-  //       dbName: "databridge",
-  //     },
-  //   });
-
-  //   const pgService = new PostgresServices(adminPool);
-
-  //   pgService.adminInitialization({ dbName: "databridge" });
-
-  //   res.json(
-  //     new ApiResponse({
-  //       message: "Success",
-  //       statusCode: 200,
-  //     })
-  //   );
-  // });
-
   return app;
 }

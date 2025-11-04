@@ -819,6 +819,7 @@ ORDER BY total_calls ASC;
 
     try {
       await client.connect();
+      await client.query("CREATE EXTENSION IF NOT EXISTS pg_stat_statements;");
       const result = await client.query(sqlQuery);
 
       return new PGClassResults<typeof result.rows>({
