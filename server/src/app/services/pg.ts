@@ -47,6 +47,40 @@ export class PostgresServices {
     this.pool = pool;
   }
 
+  async adminInitialization({ dbName }: { dbName: string }) {
+    const client = await this.pool.connect();
+
+    try {
+      const newDbClient = new Pool({
+        user: envConf.DATABASE_ADMIN_USER,
+        host: "localhost",
+        password: envConf.DATABASE_ADMIN_PASSWORD,
+        database: dbName,
+        port: 5432,
+      });
+
+      const subClient = await newDbClient.connect();
+
+      try {
+        await subClient.query(
+          "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;"
+        );
+        await subClient.query("CREATE EXTENSION IF NOT EXISTS dblink;");
+
+        console.log(`📊 pg_stat_statements enabled in ${dbName}`);
+      } finally {
+        subClient.release();
+        await newDbClient.end();
+      }
+
+      console.log(`✅ Successfully intiialized database ${dbName}`);
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw new Error(`Failed to create database infrastructure.`);
+    } finally {
+      client.release();
+    }
+  }
   // Updated to create a full database per project
   async createProjectInfrastructure(input: {
     username: string; // This is your platform's user ID/name
@@ -75,6 +109,7 @@ export class PostgresServices {
         dbUsername,
         dbPassword
       );
+
       await client.query(createUserQuery);
 
       // 2. Create the new database and assign the new user as the OWNER.
@@ -85,6 +120,27 @@ export class PostgresServices {
         dbUsername
       );
       await client.query(createDbQuery);
+      const newDbClient = new Pool({
+        user: envConf.DATABASE_ADMIN_USER,
+        host: "localhost",
+        password: envConf.DATABASE_ADMIN_PASSWORD,
+        database: dbName,
+        port: 5432,
+      });
+
+      const subClient = await newDbClient.connect();
+
+      try {
+        await subClient.query(
+          "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;"
+        );
+        await subClient.query("CREATE EXTENSION IF NOT EXISTS dblink;");
+
+        console.log(`📊 pg_stat_statements enabled in ${dbName}`);
+      } finally {
+        subClient.release();
+        await newDbClient.end();
+      }
 
       console.log(
         `✅ Successfully created user ${dbUsername} and database ${dbName}`
@@ -159,22 +215,50 @@ export class PostgresServices {
     platformUsername,
   }: {
     platformUsername: string;
-  }): Promise<string[]> {
-    console.log("\n\n\n\n", platformUsername, "\n\n\n\n");
-    // We look for DB owners that start with the platform username, e.g., 'vineet_%'
-    const userPattern = `${platformUsername}`;
+  }): Promise<
+    {
+      datname: string;
+      size: string;
+      sizeBytes: number;
+      activeConnections: number;
+      totalOperations: number;
+    }[]
+  > {
+    const userPattern = `${platformUsername}%`;
 
     const query = format(
-      `SELECT d.datname FROM pg_database d
-       JOIN pg_user u ON d.datdba = u.usesysid
-       WHERE u.usename LIKE %L;`,
+      `SELECT 
+        d.datname,
+        pg_size_pretty(pg_database_size(d.datname)) as size,
+        pg_database_size(d.datname) as size_bytes,
+        COALESCE(active_conn.active_connections, 0) as active_connections,
+        COALESCE(s.tup_returned + s.tup_fetched + s.tup_inserted + s.tup_updated + s.tup_deleted, 0) as total_operations
+      FROM pg_database d
+      JOIN pg_user u ON d.datdba = u.usesysid
+      LEFT JOIN pg_stat_database s ON d.oid = s.datid
+      LEFT JOIN (
+        SELECT 
+          datname, 
+          COUNT(*) as active_connections
+        FROM pg_stat_activity 
+        WHERE state = 'active' 
+        GROUP BY datname
+      ) active_conn ON d.datname = active_conn.datname
+      WHERE u.usename LIKE %L
+      ORDER BY d.datname;`,
       userPattern
     );
 
     try {
       const result = await this.pool.query(query);
-      // The result is an array of objects, so we map it to an array of strings
-      return result.rows.map((row) => row.datname);
+
+      return result.rows.map((row) => ({
+        datname: row.datname,
+        size: row.size,
+        sizeBytes: parseInt(row.size_bytes, 10),
+        activeConnections: parseInt(row.active_connections, 10),
+        totalOperations: parseInt(row.total_operations, 10),
+      }));
     } catch (error) {
       console.error(
         `Failed to fetch databases for ${platformUsername}:`,
@@ -183,7 +267,6 @@ export class PostgresServices {
       throw new Error("Could not fetch databases.");
     }
   }
-
   //   async getTablesForDatabase({
   //     dbUserName,
   //     dbName,
@@ -693,6 +776,132 @@ WHERE con.contype = 'p'  -- 'p' = PRIMARY KEY
     } catch (err: any) {
       console.error("pg_dump failed:", err.stderr?.toString() || err.message);
       throw err;
+    }
+  }
+
+  async getAnalytics({
+    dbUserName,
+    dbName,
+    dbPassword,
+  }: {
+    dbUserName: string;
+    dbName: string;
+    dbPassword: string;
+  }) {
+    const client = new Client({
+      user: dbUserName,
+      host: "localhost",
+      database: dbName,
+      password: dbPassword,
+      port: 5432,
+    });
+
+    const sqlQuery = `
+SELECT
+  CASE
+    WHEN query ILIKE 'select%' THEN 'SELECT'
+    WHEN query ILIKE 'insert%' THEN 'INSERT'
+    WHEN query ILIKE 'update%' THEN 'UPDATE'
+    WHEN query ILIKE 'delete%' THEN 'DELETE'
+    WHEN query ILIKE 'alter%'  THEN 'ALTER'
+    WHEN query ILIKE 'drop%'   THEN 'DROP'
+    ELSE 'OTHER'
+  END AS query_type,
+  COUNT(*) AS total_unique_queries,
+  SUM(calls) AS total_calls,
+  ROUND(AVG(mean_exec_time)::numeric, 3) AS avg_exec_time_ms,
+  ROUND(SUM(total_exec_time)::numeric, 3) AS total_exec_time_ms
+FROM pg_stat_statements
+GROUP BY query_type
+ORDER BY total_calls ASC;
+
+    `;
+
+    try {
+      await client.connect();
+      const result = await client.query(sqlQuery);
+
+      return new PGClassResults<typeof result.rows>({
+        success: true,
+        message: `Retrieved ${result.rowCount} analytics rows`,
+        data: result.rows.filter(
+          (it: { query_type: string }) => it.query_type != "OTHER"
+        ),
+      });
+    } catch (error: any) {
+      if (error.message.includes("pg_stat_statements")) {
+        logger.warn(
+          `pg_stat_statements not enabled for ${dbName} (user ${dbUserName})`
+        );
+        throw new Error(
+          "pg_stat_statements extension not enabled for this database."
+        );
+      }
+
+      logger.error(
+        `Failed to fetch query analytics for ${dbUserName} in ${dbName}:`,
+        error
+      );
+      throw new Error("Could not fetch analytics data.");
+    } finally {
+      await client.end();
+    }
+  }
+  async resetAllAnalytics() {
+    logger.info("🧹 Starting global analytics reset across all databases...");
+
+    try {
+      const { rows } = await this.pool.query(`
+      SELECT datname
+      FROM pg_database
+      WHERE datistemplate = false
+        AND datallowconn = true
+        AND datname NOT IN ('postgres')
+      ORDER BY datname;
+    `);
+
+      const temp = [
+        "databridge",
+        "80e372048afe24c26980ec67e6a91fa65012",
+        "postgres",
+      ];
+
+      // Process databases in parallel with limited concurrency
+      const resetPromises = rows
+        .filter(({ datname }) => !temp.includes(datname))
+        .map(async ({ datname }) => {
+          try {
+            const dbPool = new Pool({
+              user: envConf.DATABASE_ADMIN_USER,
+              host: "localhost",
+              database: datname,
+              password: envConf.DATABASE_ADMIN_PASSWORD,
+              port: 5432,
+              max: 1, // Only one connection needed
+            });
+
+            await dbPool.query("SELECT pg_stat_statements_reset();");
+            await dbPool.end();
+
+            logger.info(`✅ Reset analytics for ${datname}`);
+            return { success: true, database: datname };
+          } catch (err: any) {
+            logger.warn(
+              `⚠️ Could not reset analytics for ${datname}: ${err.message}`
+            );
+            return { success: false, database: datname, error: err.message };
+          }
+        });
+
+      const results = await Promise.allSettled(resetPromises);
+      const successful = results.filter((r) => r.status === "fulfilled").length;
+
+      return new PGClassResults({
+        success: true,
+        message: `Analytics reset completed for ${successful}/${results.length} databases`,
+      });
+    } catch (error: any) {
+      throw error;
     }
   }
 }
