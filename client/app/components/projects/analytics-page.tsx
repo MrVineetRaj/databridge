@@ -26,9 +26,9 @@ interface Props {
   }[];
 }
 
-export function DatabaseAnalytics({ data }: Props) {
+export function DatabaseAnalytics({ data = [] }: Props) {
   // Convert string numbers to actual numbers and ensure minimum value for log scale
-  const chartData = data.map(item => {
+  const chartData = data.map((item) => {
     const totalCalls = parseInt(item.total_calls);
     return {
       ...item,
@@ -49,7 +49,7 @@ export function DatabaseAnalytics({ data }: Props) {
       color: "hsl(220, 70%, 50%)",
     },
     INSERT: {
-      label: "INSERT", 
+      label: "INSERT",
       color: "hsl(160, 60%, 45%)",
     },
     UPDATE: {
@@ -76,19 +76,32 @@ export function DatabaseAnalytics({ data }: Props) {
 
   // Function to get color for a query type
   const getColorForQueryType = (queryType: string) => {
-    return (analyticsConfig[queryType as keyof typeof analyticsConfig] as any)?.color || "hsl(215, 20%, 65%)";
+    return (
+      (analyticsConfig[queryType as keyof typeof analyticsConfig] as any)
+        ?.color || "hsl(215, 20%, 65%)"
+    );
   };
 
   // Calculate totals for the summary using original values
-  const totalCalls = chartData.reduce((sum, item) => sum + item.total_calls_original, 0);
-  const totalUniqueQueries = chartData.reduce((sum, item) => sum + item.total_unique_queries, 0);
-  const avgResponseTime = chartData.length > 0 
-    ? (chartData.reduce((sum, item) => sum + item.avg_exec_time_ms, 0) / chartData.length).toFixed(2)
-    : "0";
+  const totalCalls = chartData.reduce(
+    (sum, item) => sum + item.total_calls_original,
+    0
+  );
+  const totalUniqueQueries = chartData.reduce(
+    (sum, item) => sum + item.total_unique_queries,
+    0
+  );
+  const avgResponseTime =
+    chartData.length > 0
+      ? (
+          chartData.reduce((sum, item) => sum + item.avg_exec_time_ms, 0) /
+          chartData.length
+        ).toFixed(2)
+      : "0";
 
   // Find the most used query type
-  const mostUsedQuery = chartData.reduce((prev, current) => 
-    (prev.total_calls_original > current.total_calls_original) ? prev : current
+  const mostUsedQuery = chartData.reduce((prev, current) =>
+    prev.total_calls_original > current.total_calls_original ? prev : current
   );
 
   // Custom tooltip to show all relevant information
@@ -102,19 +115,28 @@ export function DatabaseAnalytics({ data }: Props) {
             <div className="grid gap-1 text-sm">
               <div className="flex items-center gap-2">
                 <Activity className="h-3 w-3 text-blue-500" />
-                <span>Total Calls: <strong>{data.total_calls_original.toLocaleString()}</strong></span>
+                <span>
+                  Total Calls:{" "}
+                  <strong>{data.total_calls_original.toLocaleString()}</strong>
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <Database className="h-3 w-3 text-green-500" />
-                <span>Unique Queries: <strong>{data.total_unique_queries}</strong></span>
+                <span>
+                  Unique Queries: <strong>{data.total_unique_queries}</strong>
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <Clock className="h-3 w-3 text-orange-500" />
-                <span>Avg Time: <strong>{data.avg_exec_time_ms}ms</strong></span>
+                <span>
+                  Avg Time: <strong>{data.avg_exec_time_ms}ms</strong>
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <Clock className="h-3 w-3 text-red-500" />
-                <span>Total Time: <strong>{data.total_exec_time_ms}ms</strong></span>
+                <span>
+                  Total Time: <strong>{data.total_exec_time_ms}ms</strong>
+                </span>
               </div>
             </div>
           </div>
@@ -147,7 +169,9 @@ export function DatabaseAnalytics({ data }: Props) {
           <div className="text-center text-muted-foreground">
             <Database className="mx-auto h-8 w-8 mb-2" />
             <p>No queries executed yet</p>
-            <p className="text-xs mt-1">Execute some queries to see analytics</p>
+            <p className="text-xs mt-1">
+              Execute some queries to see analytics
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -162,17 +186,22 @@ export function DatabaseAnalytics({ data }: Props) {
           Database Query Analytics
         </CardTitle>
         <CardDescription>
-          Query performance breakdown by type (Logarithmic scale for better visualization)
+          Query performance breakdown by type (Logarithmic scale for better
+          visualization)
         </CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={analyticsConfig}>
-          <BarChart 
-            accessibilityLayer 
-            data={chartData} 
+          <BarChart
+            accessibilityLayer
+            data={chartData}
             margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
           >
-            <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
+            <CartesianGrid
+              vertical={false}
+              strokeDasharray="3 3"
+              opacity={0.3}
+            />
             <XAxis
               dataKey="query_type"
               tickLine={false}
@@ -180,30 +209,31 @@ export function DatabaseAnalytics({ data }: Props) {
               axisLine={false}
               tick={{ fontSize: 12 }}
               tickFormatter={(value) =>
-                analyticsConfig[value as keyof typeof analyticsConfig]?.label || value
+                analyticsConfig[value as keyof typeof analyticsConfig]?.label ||
+                value
               }
             />
             <YAxis
               scale="log"
-              domain={[1, 'dataMax']}
+              domain={[1, "dataMax"]}
               tickLine={false}
               axisLine={false}
               tick={{ fontSize: 11 }}
               tickFormatter={formatLogTick}
-              label={{ 
-                value: 'Total Calls (log scale)', 
-                angle: -90, 
-                position: 'insideLeft',
-                style: { textAnchor: 'middle', fontSize: '12px' }
+              label={{
+                value: "Total Calls (log scale)",
+                angle: -90,
+                position: "insideLeft",
+                style: { textAnchor: "middle", fontSize: "12px" },
               }}
             />
             <ChartTooltip
               cursor={{ fill: "rgba(0, 0, 0, 0.05)", radius: 4 }}
               content={<CustomTooltip />}
             />
-            <Bar 
-              dataKey="total_calls" 
-              strokeWidth={1} 
+            <Bar
+              dataKey="total_calls"
+              strokeWidth={1}
               radius={[4, 4, 0, 0]}
               stroke="rgba(255, 255, 255, 0.1)"
             >
@@ -227,21 +257,28 @@ export function DatabaseAnalytics({ data }: Props) {
               <div className="text-muted-foreground">Total Calls</div>
             </div>
             <div className="text-center p-3 bg-muted/50 rounded-lg">
-              <div className="font-semibold text-lg text-foreground">{totalUniqueQueries}</div>
+              <div className="font-semibold text-lg text-foreground">
+                {totalUniqueQueries}
+              </div>
               <div className="text-muted-foreground">Unique Queries</div>
             </div>
             <div className="text-center p-3 bg-muted/50 rounded-lg">
-              <div className="font-semibold text-lg text-foreground">{avgResponseTime}ms</div>
+              <div className="font-semibold text-lg text-foreground">
+                {avgResponseTime}ms
+              </div>
               <div className="text-muted-foreground">Avg Response</div>
             </div>
           </div>
-          
+
           {/* Most Used Query Type Highlight */}
           {totalCalls > 0 && (
             <div className="text-center p-2 bg-primary/10 rounded-lg border">
               <p className="text-sm text-muted-foreground">
-                Most used query type: <span className="font-medium text-foreground">{mostUsedQuery.query_type}</span> 
-                {" "}({mostUsedQuery.total_calls_original.toLocaleString()} calls)
+                Most used query type:{" "}
+                <span className="font-medium text-foreground">
+                  {mostUsedQuery.query_type}
+                </span>{" "}
+                ({mostUsedQuery.total_calls_original.toLocaleString()} calls)
               </p>
             </div>
           )}

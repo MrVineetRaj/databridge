@@ -6,3 +6,5 @@ logs
 /src/generated/prisma
 
 sql-dumps
+
+pgconfig

@@ -91,6 +91,21 @@ export function registerRoutes() {
         })
       )
       .query(TRPCAsyncHandler(actions.getDashboardData.bind(actions))),
+    addNewWhiteListedIp: protectedProcedure
+      .input(
+        z.object({
+          projectId: z.string(),
+          ip: z.string(),
+        })
+      )
+      .mutation(TRPCAsyncHandler(actions.addNewWhiteListedIp.bind(actions))),
+    getWhitelistedIps: protectedProcedure
+      .input(
+        z.object({
+          projectId: z.string(),
+        })
+      )
+      .query(TRPCAsyncHandler(actions.getWhitelistedIps.bind(actions))),
   });
 
   return dbInstanceRoutes;

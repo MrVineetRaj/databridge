@@ -8,6 +8,8 @@ import { envConf } from "../../lib/envConf";
 import format from "pg-format";
 import { encryptionServices } from "../../services/encryption";
 import logger, { loggerMetadata } from "../../lib/logger";
+import { isValidIP } from "../../lib/utils";
+import { dirtyBitForWhitelistingDB } from "../../services/dirty-bit-service";
 
 export class Actions {
   async getDatabasesInsideProject(
@@ -472,35 +474,96 @@ WHERE t.%I = u.%I;
     const databasesResources = await pgService.getDatabasesForUser({
       platformUsername: project?.dbUser!,
     });
+
+    const dbPassword = encryptionServices.decrypt(project.dbPassword!).result;
     const analytics = await pgService.getAnalytics({
       dbName: project.dbName!,
-      dbPassword: encryptionServices.decrypt(project.dbPassword!).result,
+      dbPassword: dbPassword,
       dbUserName: project.dbUser!,
+    });
+
+    const whitelistedIpCnt = await db.whiteListedIP.count({
+      where: {
+        projectId: input.projectId,
+      },
     });
 
     const result = {
       project: {
         ...project,
         dbCnt: databasesResources.length,
+        dbPassword: dbPassword,
       },
       analytics: analytics.data || [],
       resourceUsage: {
         storage: databasesResources.reduce((acc, it) => acc + +it.sizeBytes, 0),
-        activeConnections: databasesResources.reduce(
-          (acc, it) => acc + +it.activeConnections,
-          0
-        ),
-        totalOperations: databasesResources.reduce(
-          (acc, it) => acc + +it.totalOperations,
-          0
-        ),
+        activeConnections:
+          databasesResources?.reduce(
+            (acc, it) => acc + +it.activeConnections,
+            0
+          ) || 0,
+        totalOperations:
+          databasesResources?.reduce(
+            (acc, it) => acc + +it.totalOperations,
+            0
+          ) || 0,
       },
+      whitelistedIpCnt,
     };
 
     return new ApiResponse<typeof result>({
       message: "Dashboard Data fetched",
       statusCode: 200,
       data: result,
+    });
+  }
+
+  async addNewWhiteListedIp(
+    input: { projectId: string; ip: string },
+    ctx: AuthedContext
+  ) {
+    if (!isValidIP(input.ip)) {
+      throw new Error("Require a valid IPv4");
+    }
+    const project = await db.project.findUnique({
+      where: {
+        id: input.projectId,
+        userId: ctx.user.id,
+      },
+    });
+
+    if (!project) {
+      throw new Error("Project not found");
+    }
+    const newIp = await db.whiteListedIP.create({
+      data: {
+        projectId: project.id,
+        dbName: project.dbName!,
+        ip: input.ip,
+        isActive: false,
+      },
+    });
+
+    dirtyBitForWhitelistingDB.makeItDirty();
+
+    return new ApiResponse<typeof newIp>({
+      statusCode: 201,
+      message: "New IP whitelisted",
+      data: newIp,
+    });
+  }
+
+  async getWhitelistedIps(input: { projectId: string }, ctx: AuthedContext) {
+    const whitelistedIps = await db.whiteListedIP.findMany({
+      where: {
+        projectId: input.projectId,
+      },
+    });
+
+    return new ApiResponse<typeof whitelistedIps>({
+      statusCode: 201,
+      message: "Whitelisted ips fetched",
+      data: whitelistedIps,
     });
   }
 }

@@ -50,6 +50,7 @@ model Project {
 
   user User @relation(fields: [userId],references: [id],onDelete: Cascade)
   dbBackups DatabaseBackups[]
+  whiteListedIP WhiteListedIP[]
 }
 
 model DiscordIntegration{
@@ -69,6 +70,19 @@ model DatabaseBackups{
   projectId String 
   dbName String 
   publicId String
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId],references: [id],onDelete: Cascade)
+}
+
+model WhiteListedIP{
+  id String @id @default(cuid()) 
+  projectId String 
+  ip String
+  dbName String 
+  isActive Boolean @default(false)
+
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 

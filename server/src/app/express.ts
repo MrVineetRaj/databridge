@@ -149,5 +149,32 @@ export function createExpressApp(): Application {
     })
   );
 
+  // app.get("/test", async (req: Request, res: Response) => {
+  //   const user = await db.user.update({
+  //     where: {
+  //       email: "vineetrajrj26@gmail.com",
+  //     },
+  //     data: {
+  //       role: "ADMIN",
+  //     },
+  //   });
+
+  //   // const project = await db.project.create({
+  //   //   data: {
+  //   //     projectTitle: "DataBridge",
+  //   //     userId: user?.id,
+  //   //     projectDescription: "A DBaaS",
+  //   //     dbName: "databridge",
+  //   //     dbUser: envConf.DATABASE_ADMIN_USER,
+  //   //     dbPassword: encryptionServices.encrypt(envConf.DATABASE_ADMIN_PASSWORD),
+  //   //     dbDomain: "localhost:5432",
+  //   //   },
+  //   // });
+
+  //   // const 
+
+  //   res.send("OK");
+  // });
+
   return app;
 }

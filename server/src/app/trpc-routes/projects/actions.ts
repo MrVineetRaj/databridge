@@ -11,6 +11,7 @@ import { encryptionServices } from "../../services/encryption";
 import logger, { loggerMetadata } from "../../lib/logger";
 import { cloudinaryServices } from "../../services/cloudinary";
 import axios, { AxiosError } from "axios";
+import { dirtyBitForWhitelistingDB } from "../../services/dirty-bit-service";
 
 export class Actions {
   async newProject(
@@ -48,6 +49,17 @@ export class Actions {
         dbDomain: envConf.DATABASE_HOST,
       },
     });
+
+    await db.whiteListedIP.create({
+      data: {
+        ip: "0.0.0.0",
+        dbName: dbInfo.dbName,
+        projectId: newProject.id,
+        isActive: false,
+      },
+    });
+
+    dirtyBitForWhitelistingDB.makeItDirty();
 
     dbInstanceJobQueue.add(
       "rotate_password",

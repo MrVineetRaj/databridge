@@ -21,7 +21,7 @@ import {
   useParams,
 } from "react-router";
 import { ProjectForm } from "~/components/projects/project-form";
-import { IntegrationForm } from "~/components/shared/integrations";
+import { SettingDialog } from "~/components/shared/settings";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
 import { Badge } from "~/components/ui/badge";
@@ -105,21 +105,19 @@ const ConsoleLayout = () => {
     },
   ];
 
-  const QUICK_ACTIONS = [
-    {
-      title: "Settings",
-      link: `/console/${project_id}/settings`,
-      icon: Settings,
-      description: "Project settings",
-    },
-  ];
+  const QUICK_ACTIONS: {
+    title: string;
+    link: string;
+    icon: typeof GitBranchIcon;
+    description: string;
+  }[] = [];
 
   const isTableDisabled = projectDetails?.inactiveDatabases.includes(
     projectDetails.dbName as string
   );
 
   return (
-    <div className="max-w-screen flex min-h-screen bg-gradient-to-br from-background via-accent to-secondary">
+    <div className="max-w-screen flex min-h-screen bg-linear-to-br from-background via-accent to-secondary">
       <SidebarProvider className={cn(isMobile ? "w-0" : "w-80")}>
         <Sidebar className=" backdrop-blur-sm border-r border-border/50 shadow-xl w-80">
           {/* Header */}
@@ -129,7 +127,7 @@ const ConsoleLayout = () => {
                 <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Database className="w-4 h-4 text-primary-foreground" />
                 </div>
-                <span className="text-xl font-bold bg-gradient-to-r from-primary to-chart-1 bg-clip-text text-transparent">
+                <span className="text-xl font-bold bg-linear-to-r from-primary to-chart-1 bg-clip-text text-transparent">
                   DataBridge
                 </span>
               </Link>
@@ -147,7 +145,7 @@ const ConsoleLayout = () => {
           <SidebarContent className="px-4 py-6  bg-white ">
             {/* Project Info Card */}
             {projectDetails && (
-              <div className="mb-6 p-3 bg-gradient-to-r from-primary/10 to-chart-1/10 rounded-lg border border-primary/20">
+              <div className="mb-6 p-3 bg-linear-to-r from-primary/10 to-chart-1/10 rounded-lg border border-primary/20">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 bg-primary rounded-md flex items-center justify-center">
@@ -258,6 +256,37 @@ const ConsoleLayout = () => {
                 Quick Actions
               </SidebarGroupLabel>
               <div className="space-y-2">
+                <span
+                  className={cn(
+                    "group relative flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200",
+                    "hover:bg-accent/50 hover:shadow-sm"
+                  )}
+                  onClick={() => {
+                    navigate(location.pathname + "?configuration-tab=integrations");
+                  }}
+                >
+                  <div
+                    className={cn(
+                      "w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200",
+                      "bg-muted group-hover:bg-primary/10"
+                    )}
+                  >
+                    <CogIcon
+                      className={cn(
+                        "w-4 h-4 transition-colors",
+                        "text-muted-foreground group-hover:text-primary"
+                      )}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className={cn("font-medium text-sm text-foreground")}>
+                      {"Settings"}
+                    </div>{" "}
+                    <div className={cn("text-xs", "text-muted-foreground")}>
+                      Project Settings
+                    </div>
+                  </div>
+                </span>
                 {QUICK_ACTIONS?.map(
                   ({ title, link, icon: Icon, description }) => {
                     const isActive = location.pathname === link;
@@ -362,6 +391,8 @@ const ConsoleLayout = () => {
       <main className="flex-1 overflow-hidden">
         <Outlet />
       </main>
+
+      <SettingDialog />
     </div>
   );
 };
