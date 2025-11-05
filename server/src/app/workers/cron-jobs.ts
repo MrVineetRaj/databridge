@@ -113,7 +113,6 @@ cron.schedule("*/15 * * * *", async () => {
     "host all all 127.0.0.1/32 trust",
     `ost all all ::1/128 trust`,
     `host all all ${envConf.PRIVATE_IP}/32 scram-sha-256`,
-    `host all all 142.250.182.219/32 scram-sha-256`,
   ];
 
   let newIpRules = whiteListedIp?.map((it) => {
