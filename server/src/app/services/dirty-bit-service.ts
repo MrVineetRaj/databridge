@@ -4,7 +4,7 @@ class DirtyBitService {
 
   constructor({ dirtyBitName }: { dirtyBitName: string }) {
     this.dirtyBitName = dirtyBitName;
-    this.dirtyBitValue = 0;
+    this.dirtyBitValue = 1;
   }
 
   makeItDirty() {

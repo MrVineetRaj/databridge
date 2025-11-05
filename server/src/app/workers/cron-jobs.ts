@@ -95,51 +95,56 @@ cron.schedule("0 0 * * *", async () => {
   await pgService.resetAllAnalytics();
 });
 
-cron.schedule("*/15 * * * *", async () => {
-  if (!dirtyBitForWhitelistingDB.isDirty()) {
-    logger.info("No IP address change required");
-    return;
+cron.schedule("* * * * *", async () => {
+  logger.info("Starting the ip whitelisting");
+  try {
+    if (!dirtyBitForWhitelistingDB.isDirty()) {
+      logger.info("No IP address change required");
+      return;
+    }
+    const whiteListedIp = await db.whiteListedIP.findMany({
+      where: {
+        dbName: { not: "databridge" },
+      },
+      include: {
+        project: true,
+      },
+    });
+    let contentToWrite = [
+      `local all all trust`,
+      "host all all 127.0.0.1/32 trust",
+      `ost all all ::1/128 trust`,
+      `host all all ${envConf.PRIVATE_IP}/32 scram-sha-256`,
+    ];
+
+    let newIpRules = whiteListedIp?.map((it) => {
+      return `host ${it.project?.dbName} ${it.project.dbUser} ${it.ip}/${
+        it.ip === "0.0.0.0" ? "0" : "32"
+      } scram-sha-256`;
+    });
+
+    contentToWrite = [...contentToWrite, ...newIpRules];
+    fs.writeFileSync(
+      "./pgconfig/pg_hba.conf",
+      contentToWrite.map((it) => it.trim()).join("\n") + "\n\n"
+    );
+
+    execSync(
+      `docker exec databridge-database psql -U ${envConf.DATABASE_ADMIN_USER} -c "SELECT pg_reload_conf();"`
+    );
+
+    await db.whiteListedIP.updateMany({
+      where: {
+        isActive: false,
+      },
+      data: {
+        isActive: true,
+      },
+    });
+
+    dirtyBitForWhitelistingDB.cleanBit();
+    logger.info("updated pg_conf");
+  } catch (error: any) {
+    logger.error(error.message);
   }
-  const whiteListedIp = await db.whiteListedIP.findMany({
-    where: {
-      dbName: { not: "databridge" },
-    },
-    include: {
-      project: true,
-    },
-  });
-  let contentToWrite = [
-    `local all all trust`,
-    "host all all 127.0.0.1/32 trust",
-    `ost all all ::1/128 trust`,
-    `host all all ${envConf.PRIVATE_IP}/32 scram-sha-256`,
-  ];
-
-  let newIpRules = whiteListedIp?.map((it) => {
-    return `host ${it.project?.dbName} ${it.project.dbUser} ${it.ip}/${
-      it.ip === "0.0.0.0" ? "0" : "32"
-    } scram-sha-256`;
-  });
-
-  contentToWrite = [...contentToWrite, ...newIpRules];
-  fs.writeFileSync(
-    "./pgconfig/pg_hba.conf",
-    contentToWrite.map((it) => it.trim()).join("\n") + "\n\n"
-  );
-
-  execSync(
-    `docker exec databridge-database psql -U ${envConf.DATABASE_ADMIN_USER} -c "SELECT pg_reload_conf();"`
-  );
-
-  await db.whiteListedIP.updateMany({
-    where: {
-      isActive: false,
-    },
-    data: {
-      isActive: true,
-    },
-  });
-
-  dirtyBitForWhitelistingDB.cleanBit();
-  logger.info("updated pg_conf");
 });
