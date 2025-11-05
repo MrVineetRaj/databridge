@@ -15,7 +15,7 @@ import {
   Lock,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import {
@@ -34,7 +34,11 @@ import type { Route } from "../+types/root";
 import type { IProject } from "~/lib/types";
 import { Label } from "~/components/ui/label";
 import { DatabaseAnalytics } from "~/components/projects/analytics-page";
-import { calculateStoragePercentage, parseBigNumber, parseBigStorage } from "~/lib/utils";
+import {
+  calculateStoragePercentage,
+  parseBigNumber,
+  parseBigStorage,
+} from "~/lib/utils";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -44,6 +48,7 @@ export function meta({}: Route.MetaArgs) {
 }
 
 const ConsolePage = () => {
+  const navigate = useNavigate();
   const { project_id } = useParams();
   const { user } = useUserStore();
   const trpc = useTRPC();
@@ -110,9 +115,9 @@ const ConsolePage = () => {
   const avgResponseTime = 23; // ms
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-background via-accent to-secondary">
+    <div className="max-h-screen overflow-y-hidden bg-linear-to-br from-background via-accent to-secondary flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-10 flex items-center justify-between h-16 bg-card/80 backdrop-blur-sm border-b border-border/50 px-6 shadow-sm">
+      <header className="sticky top-0 z-10 flex items-center justify-between min-h-16 bg-card/80 backdrop-blur-sm border-b border-border/50 px-6 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <Database className="w-4 h-4 text-primary-foreground" />
@@ -131,7 +136,7 @@ const ConsolePage = () => {
         </Badge>
       </header>
 
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 h-full overflow-y-auto">
         {/* Database Status Alert */}
         {dashboardData?.data?.project?.inactiveDatabases &&
           dashboardData?.data?.project?.inactiveDatabases.length > 0 && (
@@ -176,61 +181,60 @@ const ConsolePage = () => {
             </Card>
           )}
 
-
-{/* Connection Details */}
-{isActive && (
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center gap-2">
-        <Database className="w-5 h-5" />
-        Connection Details
-      </CardTitle>
-      <CardDescription>
-        Use these credentials to connect your applications
-      </CardDescription>
-    </CardHeader>
-    <CardContent className="space-y-4">
-      <div className="space-y-2">
-        <Label className="text-sm font-medium">Connection String</Label>
-        <div className="flex items-start gap-2">
-          <div className="flex-1 p-3 bg-muted rounded-lg font-mono text-sm overflow-hidden">
-            <div className="break-all whitespace-pre-wrap">
-              postgres://{showingCred ? projectDetails?.dbUser : "********"}
-              :{showingCred ? projectDetails?.dbPassword : "********"}@
-              {projectDetails?.dbDomain}/{projectDetails?.dbName}
-            </div>
-          </div>
-          <div className="flex flex-col gap-1 shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowingCred(!showingCred)}
-            >
-              {showingCred ? (
-                <EyeIcon className="w-4 h-4" />
-              ) : (
-                <EyeClosedIcon className="w-4 h-4" />
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                navigator.clipboard.writeText(
-                  `postgres://${projectDetails?.dbUser}:${projectDetails?.dbPassword}@${projectDetails?.dbDomain}/${projectDetails?.dbName}`
-                );
-                toast.success("Copied to clipboard!");
-              }}
-            >
-              <CopyIcon className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
-
-    </CardContent>
-  </Card>
-)}
+        {/* Connection Details */}
+        {isActive && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="w-5 h-5" />
+                Connection Details
+              </CardTitle>
+              <CardDescription>
+                Use these credentials to connect your applications
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Connection String</Label>
+                <div className="flex items-start gap-2">
+                  <div className="flex-1 p-3 bg-muted rounded-lg font-mono text-sm overflow-hidden">
+                    <div className="break-all whitespace-pre-wrap">
+                      postgres://
+                      {showingCred ? projectDetails?.dbUser : "********"}:
+                      {showingCred ? projectDetails?.dbPassword : "********"}@
+                      {projectDetails?.dbDomain}/{projectDetails?.dbName}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowingCred(!showingCred)}
+                    >
+                      {showingCred ? (
+                        <EyeIcon className="w-4 h-4" />
+                      ) : (
+                        <EyeClosedIcon className="w-4 h-4" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(
+                          `postgres://${projectDetails?.dbUser}:${projectDetails?.dbPassword}@${projectDetails?.dbDomain}/${projectDetails?.dbName}`
+                        );
+                        toast.success("Copied to clipboard!");
+                      }}
+                    >
+                      <CopyIcon className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Main Dashboard Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -256,7 +260,13 @@ const ConsolePage = () => {
                     of 2GB
                   </span>
                 </div>
-                <Progress value={calculateStoragePercentage(dashboardData?.data?.resourceUsage?.storage,2)} className="h-3" />
+                <Progress
+                  value={calculateStoragePercentage(
+                    dashboardData?.data?.resourceUsage?.storage,
+                    2
+                  )}
+                  className="h-3"
+                />
               </div>
 
               <div className="grid grid-cols-3 gap-4 pt-4">
@@ -304,9 +314,15 @@ const ConsolePage = () => {
                   </div>
                   <Badge
                     variant="secondary"
-                    className="bg-chart-2/10 text-chart-2"
+                    className={
+                      dashboardData?.data?.whitelistedIpCnt === 0
+                        ? "bg-chart-2/10 text-chart-2"
+                        : "bg-destructive/20 text-destructive"
+                    }
                   >
-                    Enabled
+                    {dashboardData?.data?.whitelistedIpCnt === 0
+                      ? "Enabled"
+                      : "Disabled"}
                   </Badge>
                 </div>
 
@@ -315,11 +331,19 @@ const ConsolePage = () => {
                     <Lock className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm font-medium">IP Whitelist</span>
                   </div>
-                  <Badge variant="outline">0 Rules</Badge>
+                  <Badge variant="outline">
+                    {dashboardData?.data?.whitelistedIpCnt} Rules
+                  </Badge>
                 </div>
               </div>
 
-              <Button variant="outline" className="w-full">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  navigate(location.pathname + "?configuration-tab=ip-rules");
+                }}
+              >
                 Configure Access Rules
               </Button>
             </CardContent>
@@ -327,17 +351,17 @@ const ConsolePage = () => {
         </div>
 
         {/* Analytics Section */}
-        <Card>
-          <CardHeader>
+        {/* <Card> */}
+        {/* <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Activity className="w-5 h-5" />
               Database Analytics
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <DatabaseAnalytics data={dashboardData?.data?.analytics} />
-          </CardContent>
-        </Card>
+          <CardContent> */}
+        <DatabaseAnalytics data={dashboardData?.data?.analytics} />
+        {/* </CardContent> */}
+        {/* </Card> */}
       </div>
     </div>
   );
