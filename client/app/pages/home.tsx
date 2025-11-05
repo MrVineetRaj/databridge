@@ -21,6 +21,8 @@ import {
   Search,
   Settings,
   MessageSquare,
+  Lock,
+  Network,
 } from "lucide-react";
 import { Link } from "react-router";
 
@@ -47,9 +49,9 @@ export default function Home() {
     },
     {
       icon: Shield,
-      title: "Secure & Isolated",
+      title: "IP Firewall Protection",
       description:
-        "Each project gets its own isolated database with encrypted credentials and unique access.",
+        "Control database access with IP whitelisting and network security rules for enterprise-grade protection.",
       color: "bg-chart-2",
     },
     {
@@ -109,8 +111,8 @@ export default function Home() {
             </h1>
 
             <p className="mx-auto mt-8 max-w-3xl text-xl text-muted-foreground leading-relaxed">
-              Create and manage PostgreSQL databases with ease. Get automated
-              backups, secure credentials, and powerful query tools - all from
+              Create and manage PostgreSQL databases with enterprise-grade security. Get automated
+              backups, IP firewall protection, and powerful query tools - all from
               one dashboard.
             </p>
 
@@ -192,6 +194,73 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Security Spotlight Section */}
+      <section className="relative px-4 py-16 sm:px-6 lg:px-8 bg-gradient-to-r from-chart-2/10 to-primary/10">
+        <div className="mx-auto max-w-7xl">
+          <div className="text-center mb-12">
+            <Badge className="mb-4 bg-chart-2/20 text-chart-2 border-chart-2/30">
+              🔒 Enterprise Security
+            </Badge>
+            <h2 className="text-4xl font-bold text-foreground">
+              Production-Ready Security Features
+            </h2>
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            <div>
+              <Card className="border-chart-2/30 bg-card/80 backdrop-blur-sm">
+                <CardContent className="p-8">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Shield className="w-12 h-12 text-chart-2" />
+                    <Network className="w-8 h-8 text-chart-1" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-foreground mb-4">
+                    IP Firewall & Access Control
+                  </h3>
+                  <p className="text-muted-foreground mb-6">
+                    Configure network access rules, whitelist specific IPs, and control who can connect to your databases with enterprise-grade security.
+                  </p>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex items-center gap-2">
+                      ✅ IP address whitelisting
+                    </li>
+                    <li className="flex items-center gap-2">
+                      ✅ CIDR range support
+                    </li>
+                    <li className="flex items-center gap-2">
+                      ✅ Real-time access control
+                    </li>
+                    <li className="flex items-center gap-2">
+                      ✅ PostgreSQL pg_hba.conf integration
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </div>
+            
+            <div className="relative">
+              <div className="bg-slate-900 rounded-lg p-6 text-green-400 font-mono text-sm shadow-2xl">
+                <div className="flex items-center gap-2 mb-4 text-slate-400">
+                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <span className="ml-2">pg_hba.conf</span>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-slate-500"># Allow localhost connections</div>
+                  <div>host all all 127.0.0.1/32 trust</div>
+                  <div className="text-slate-500"># Whitelist office network</div>
+                  <div>host all all 192.168.1.0/24 md5</div>
+                  <div className="text-slate-500"># Allow specific IP</div>
+                  <div>host all all 10.0.0.1/32 scram-sha-256</div>
+                  <div className="text-slate-500"># Block all others by default</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* How It Works Section */}
       <section className="px-4 py-24 sm:px-6 lg:px-8 bg-accent/30">
         <div className="mx-auto max-w-7xl">
@@ -223,11 +292,11 @@ export default function Home() {
                   2
                 </div>
                 <h4 className="text-xl font-bold text-card-foreground mb-4 text-center">
-                  Get Credentials
+                  Configure Security
                 </h4>
                 <p className="text-muted-foreground text-center">
-                  Receive auto-generated secure database credentials and
-                  connection string instantly.
+                  Set up IP firewall rules and receive auto-generated secure 
+                  database credentials instantly.
                 </p>
               </CardContent>
             </Card>
@@ -242,7 +311,7 @@ export default function Home() {
                 </h4>
                 <p className="text-muted-foreground text-center">
                   Connect your application and start building. Manage data
-                  through our web interface.
+                  through our web interface with peace of mind.
                 </p>
               </CardContent>
             </Card>
@@ -256,13 +325,16 @@ export default function Home() {
           <Card className="relative overflow-hidden bg-linear-to-br from-primary via-chart-1 to-chart-3 border-0 shadow-2xl">
             <div className="absolute inset-0 bg-black/10"></div>
             <CardContent className="relative pt-16 pb-16">
-              <Database className="w-16 h-16 text-white/80 mx-auto mb-6" />
+              <div className="flex items-center justify-center gap-3 mb-6">
+                <Database className="w-16 h-16 text-white/80" />
+                <Lock className="w-12 h-12 text-white/60" />
+              </div>
               <h3 className="text-4xl font-bold text-white mb-6">
                 Ready to simplify database management?
               </h3>
               <p className="text-xl text-white/90 mb-10 max-w-2xl mx-auto">
                 Join developers who trust DataBridge for reliable PostgreSQL
-                hosting
+                hosting with enterprise-grade security
               </p>
               <Link
                 to={isAuthenticated ? "/console" : "#"}
@@ -282,7 +354,7 @@ export default function Home() {
                 </Button>
               </Link>
               <p className="text-white/70 text-sm mt-4">
-                Free to get started • Secure by default
+                Free to get started • Secure by default • IP Firewall included
               </p>
             </CardContent>
           </Card>
