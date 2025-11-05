@@ -133,7 +133,7 @@ cron.schedule("* * * * *", async () => {
       `docker exec databridge-database psql -U ${envConf.DATABASE_ADMIN_USER} -c "SELECT pg_reload_conf();"`
     );
 
-    await db.whiteListedIP.updateMany({
+    const data = await db.whiteListedIP.updateManyAndReturn({
       where: {
         isActive: false,
       },
@@ -141,6 +141,8 @@ cron.schedule("* * * * *", async () => {
         isActive: true,
       },
     });
+
+    console.log(data);
 
     dirtyBitForWhitelistingDB.cleanBit();
     logger.info("updated pg_conf");
