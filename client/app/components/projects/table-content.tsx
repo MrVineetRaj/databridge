@@ -24,7 +24,7 @@ import {
 } from "~/components/ui/select";
 import { Label } from "../ui/label";
 import { Button } from "../ui/button";
-import { cn } from "~/lib/utils";
+import { cn, isISODateString } from "~/lib/utils";
 import { Input } from "../ui/input";
 import { toast } from "sonner";
 import { useTRPC } from "~/lib/trpc.config";
@@ -112,7 +112,11 @@ export const TableContent = ({
         for (let j = 0; j < colSize; j++) {
           if (Object.values(data[i])[j] != Object.values(tableItems[i])[j]) {
             const fieldName = Object.keys(tableItems[i])[j];
-            fieldToBeUpdated[fieldName] = tableItems[i][fieldName];
+            fieldToBeUpdated[fieldName] = isISODateString(
+              tableItems[i][fieldName]
+            )
+              ? `${new Date(tableItems[i][fieldName]).getTime()}`
+              : tableItems[i][fieldName];
           }
         }
         objectToBeUpdated[tableItems[i][primaryKey]] = fieldToBeUpdated;

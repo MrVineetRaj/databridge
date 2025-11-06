@@ -532,13 +532,14 @@ WHERE con.contype = 'p'  -- 'p' = PRIMARY KEY
         data: result.rows,
       });
       // return ["hello"];
-    } catch (error) {
+    } catch (error: any) {
       logger.error(
-        `Failed to fetch content for search query for ${dbUserName} in ${dbName}:`,
+        `Failed to fetch content for search query for ${dbName}:`,
         error
       );
       throw new Error(
-        `Failed to fetch content for search query for ${dbUserName} in ${dbName}`
+        error.message ||
+          `Failed to fetch content for search query for  ${dbName}`
       );
     }
   }
@@ -573,12 +574,9 @@ WHERE con.contype = 'p'  -- 'p' = PRIMARY KEY
         message: `Affected rows ${result.rowCount}`,
         data: result.rows,
       });
-    } catch (error) {
-      logger.error(
-        `Failed to update rows for ${dbUserName} in ${dbName}:`,
-        error
-      );
-      throw new Error(`Failed to update rows for ${dbUserName} in ${dbName}:`);
+    } catch (error: any) {
+      logger.error(`Failed to update rows for ${dbName}:`, error);
+      throw new Error(error.message || `Failed to update rows for  ${dbName}:`);
     }
   }
   async findIdleDatabasesWithDataActivity(idleDays = 7) {

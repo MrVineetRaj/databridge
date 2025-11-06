@@ -95,7 +95,7 @@ cron.schedule("0 0 * * *", async () => {
   await pgService.resetAllAnalytics();
 });
 
-cron.schedule("* * * * *", async () => {
+cron.schedule("*/15 * * * *", async () => {
   logger.info("Starting the ip whitelisting");
   try {
     if (!dirtyBitForWhitelistingDB.isDirty()) {

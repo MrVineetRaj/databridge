@@ -173,7 +173,7 @@ const TablePage = () => {
   // Loading state
   if (loadingDatabase) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-accent to-secondary">
+      <div className="min-h-screen bg-linear-to-br from-background via-accent to-secondary">
         <header className="sticky top-0 z-10 flex items-center justify-between h-16 bg-card/80 backdrop-blur-sm border-b border-border/50 px-6 shadow-sm">
           <div className="flex items-center gap-3">
             <Skeleton className="w-8 h-8 rounded-lg" />
@@ -190,7 +190,7 @@ const TablePage = () => {
 
   if (!databases?.data || databases.data.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-accent to-secondary">
+      <div className="min-h-screen bg-linear-to-br from-background via-accent to-secondary">
         <header className="sticky top-0 z-10 flex items-center justify-between h-16 bg-card/80 backdrop-blur-sm border-b border-border/50 px-6 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
@@ -219,7 +219,7 @@ const TablePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-accent to-secondary">
+    <div className="min-h-screen bg-linear-to-br from-background via-accent to-secondary">
       {/* Header */}
       <header className="sticky top-0 z-10 flex items-center justify-between h-16 bg-card/80 backdrop-blur-sm border-b border-border/50 px-6 shadow-sm">
         <div className="flex items-center gap-3">

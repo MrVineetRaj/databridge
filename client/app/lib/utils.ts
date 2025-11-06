@@ -26,3 +26,21 @@ export function calculateStoragePercentage(
   const percentage = (usedBytes / limitBytes) * 100;
   return Math.min(Math.floor(percentage), 100); // Cap at 100% and remove decimals
 }
+
+/**
+ * Checks if a string is in ISO 8601 date format (YYYY-MM-DDTHH:mm:ss.sssZ)
+ * @param value - The string to check
+ * @returns boolean - true if valid ISO date format, false otherwise
+ */
+export function isISODateString(value: string): boolean {
+  // Basic format check using regex
+  const isoDateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?$/;
+
+  if (!isoDateRegex.test(value)) {
+    return false;
+  }
+
+  // Additional validation - try to parse and check if it's a valid date
+  const date = new Date(value);
+  return !isNaN(date.getTime()) && date.toISOString() === value;
+}

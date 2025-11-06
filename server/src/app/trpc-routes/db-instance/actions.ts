@@ -367,25 +367,36 @@ export class Actions {
 
     const sqlQuery = format(
       `
-WITH updated_data (%I, %s) AS (
-  VALUES %L
-)
 UPDATE %I AS t
 SET %s
-FROM updated_data AS u
+FROM (VALUES %L) AS u(%I, %s)
 WHERE t.%I = u.%I;
   `,
-      primaryKey,
-      cols.map((c) => format.ident(c)).join(", "),
-      valuesArray,
       tableName,
       cols
-        .map((col) => format("%I = COALESCE(u.%I, t.%I)", col, col, col))
+        .map((col) => {
+          // Check if it's a timestamp column
+          if (
+            col.toLowerCase().includes("at") ||
+            col.toLowerCase().includes("time")
+          ) {
+            return format(
+              "%I = CASE WHEN u.%I ~ '^[0-9]+$' THEN to_timestamp(u.%I::bigint / 1000) ELSE u.%I::timestamp END",
+              col,
+              col,
+              col,
+              col
+            );
+          }
+          return format("%I = u.%I", col, col);
+        })
         .join(", "),
+      valuesArray,
+      primaryKey,
+      cols.map((c) => format.ident(c)).join(", "),
       primaryKey,
       primaryKey
     );
-
     const decryptedRes = encryptionServices.decrypt(project?.dbPassword!);
 
     if (!decryptedRes.success) {
