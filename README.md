@@ -14,40 +14,68 @@
 
 ## 🎬 Demo Video
 
-> **[📺 Watch DataBridge in Action](placeholder-for-demo-video)**
->
-> _See how easy it is to create, secure, and manage PostgreSQL databases with DataBridge's intuitive interface and powerful security features._
+> **[📺 Watch DataBridge in Action](https://youtu.be/zWLz2rJ4GmQ)** > _See how easy it is to create, secure, and manage PostgreSQL databases with DataBridge's intuitive interface and powerful security features._
 
 ---
 
 ## 🏗️ Architecture Overview
+<table width="100%">
+<tr>
+<td align="center">
 
-> Yet to be added
+### 🏠 Home Page
+
+<img src="./public/architecture.png" width="100%" alt="DataBridge Architecture"></td>
+</tr>
+</table>
 
 
 ---
 
 ## 📸 Screenshots
 
+<table width="100%">
+<tr>
+<td align="center">
+
 ### 🏠 Home Page
 
-![DataBridge Homepage](placeholder-homepage-screenshot.png)
-_Modern landing page showcasing platform features and security capabilities_
+<img src="./public/home-screenshot.png" width="100%" alt="DataBridge Homepage">
+<em>Modern landing page showcasing platform features and security capabilities</em>
+
+</td>
+</tr>
+<tr>
+<td align="center">
 
 ### 📊 Dashboard
 
-![Project Dashboard](placeholder-dashboard-screenshot.png)
-_Comprehensive project management with real-time analytics and monitoring_
+<img src="./public/project-dashboard-screenshot.png" width="100%" alt="Project Dashboard">
+<em>Comprehensive project management with real-time analytics and monitoring</em>
+
+</td>
+</tr>
+<tr>
+<td align="center">
 
 ### 🔧 Database Management
 
-![Database Tables](placeholder-tables-screenshot.png)
-_Intuitive SQL query interface with data browsing and editing capabilities_
+<img src="./public/table-screenshot.png" width="100%" alt="Database Tables">
+<em>Intuitive SQL query interface with data browsing and editing capabilities</em>
+
+</td>
+</tr>
+<tr>
+<td align="center">
 
 ### 🔒 Security Configuration
 
-![IP Firewall Settings](placeholder-security-screenshot.png)
-_Enterprise-grade IP firewall configuration and access control_
+<img src="./public/ip-whitlisting-screenshot.png" width="100%" alt="IP Firewall Settings">
+<em>Enterprise-grade IP firewall configuration and access control</em>
+
+</td>
+</tr>
+</table>
 
 ---
 
@@ -162,8 +190,8 @@ DATABASE_PORT="5432"
 
 
 # Github OAuth
-GITHUB_CLIENT_ID="" 
-GITHUB_CLIENT_SECRET="" 
+GITHUB_CLIENT_ID=""
+GITHUB_CLIENT_SECRET=""
 
 # Session Managemenet
 SESSION_SECRET=""
@@ -183,7 +211,7 @@ DISCORD_BOT_INSTALLATION_URL=""
 DISCORD_BOT_LOGIN_TOKEN=""
 
 
-# email 
+# email
 MAIL_TRAP_HOST=""
 MAIL_TRAP_PORT=""
 MAIL_TRAP_USERNAME=""
@@ -247,7 +275,6 @@ npm run dev
 - **Grafana Dashboard**: http://localhost:3000
 - **Prometheus**: http://localhost:9090
 
-
 ---
 
 ## 🔧 Configuration
@@ -279,8 +306,8 @@ The platform includes several monitoring and infrastructure services:
 - **Loki**: Log aggregation
 
 ---
-## 🚢 Deployment
 
+## 🚢 Deployment
 
 ## 🤝 Contributing
 
@@ -305,18 +332,17 @@ Contributions are welcome!
 
 ## 📄 License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License** 
 
 ---
-
 
 <div align="center">
 
 ### 🌟 Star this repository if you found it helpful!
 
-**Built with ❤️ by developers, for developers**
+**Built with ❤️ by [MrVineetRaj](https://www.github.com/MrVineetRaj), for developers**
 
-[🚀 Get Started](https://databridge.unknownbug.tech) 
+[🚀 Get Started](https://databridge.unknownbug.tech)
 
 ---
 

@@ -159,7 +159,9 @@ export default function Home() {
                 variant="outline"
                 className="px-8 py-4 text-lg font-semibold border-2 border-border text-foreground hover:bg-accent hover:text-accent-foreground rounded-xl transition-all duration-300"
               >
-                View Documentation
+                <Link to={"https://youtu.be/zWLz2rJ4GmQ"}>
+                  View Demo
+                </Link>
               </Button>
             </div>
 
