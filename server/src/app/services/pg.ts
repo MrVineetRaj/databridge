@@ -490,10 +490,12 @@ WHERE con.contype = 'p'  -- 'p' = PRIMARY KEY
       });
     } catch (error) {
       logger.error(
-        `Failed to fetch tables for ${dbUserName} in ${dbName}:`,
+        `Failed to Delete items from table for ${dbUserName} in ${dbName}:`,
         error
       );
-      throw new Error("Could not fetch tables.");
+      throw new Error(
+        `Failed to Delete items from table for ${dbUserName} in ${dbName}:`
+      );
     }
   }
 
@@ -532,10 +534,12 @@ WHERE con.contype = 'p'  -- 'p' = PRIMARY KEY
       // return ["hello"];
     } catch (error) {
       logger.error(
-        `Failed to fetch tables for ${dbUserName} in ${dbName}:`,
+        `Failed to fetch content for search query for ${dbUserName} in ${dbName}:`,
         error
       );
-      throw new Error("Could not fetch tables.");
+      throw new Error(
+        `Failed to fetch content for search query for ${dbUserName} in ${dbName}`
+      );
     }
   }
   async updateMultipleRows({
@@ -571,10 +575,10 @@ WHERE con.contype = 'p'  -- 'p' = PRIMARY KEY
       });
     } catch (error) {
       logger.error(
-        `Failed to fetch tables for ${dbUserName} in ${dbName}:`,
+        `Failed to update rows for ${dbUserName} in ${dbName}:`,
         error
       );
-      throw new Error("Could not fetch tables.");
+      throw new Error(`Failed to update rows for ${dbUserName} in ${dbName}:`);
     }
   }
   async findIdleDatabasesWithDataActivity(idleDays = 7) {
