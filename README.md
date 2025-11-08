@@ -4,17 +4,26 @@
 
 > **Simplifying database management for developers with instant provisioning, enterprise security, and powerful management tools.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen)](https://databridge.unknownbug.tech)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB)](https://reactjs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 
 ---
 
 ## 🎬 Demo Video
 
 > **[📺 Watch DataBridge in Action](https://youtu.be/zWLz2rJ4GmQ)** > _See how easy it is to create, secure, and manage PostgreSQL databases with DataBridge's intuitive interface and powerful security features._
+
+---
+## 🧩 Behind the Architecture
+
+Curious how DataBridge was built?  
+
+Check out the full development story → [Spinning Up Databases, Firewalls, and Backups: The Story of DataBridge](https://bitwise.mrvineetraj.live/spinning-up-databases-firewalls-and-backups-the-story-of-databridge)
 
 ---
 
