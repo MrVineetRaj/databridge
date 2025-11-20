@@ -10,19 +10,29 @@ import { encryptionServices } from "../../services/encryption";
 import logger, { loggerMetadata } from "../../lib/logger";
 import { isValidIP } from "../../lib/utils";
 import { dirtyBitForWhitelistingDB } from "../../services/dirty-bit-service";
+import { Repository } from "./repository";
 
 export class Actions {
+  repository: Repository;
+  constructor() {
+    this.repository = new Repository();
+  }
+
+  /**
+   * Retrieves all database names inside a project for the authenticated user.
+   * @param input - Object containing projectId.
+   * @param ctx - Authenticated context.
+   * @returns ApiResponse with database names.
+   */
   async getDatabasesInsideProject(
     input: { projectId: string },
     ctx: AuthedContext
   ) {
     const { user } = ctx;
 
-    const project = await db.project.findUnique({
-      where: {
-        userId: user.id,
-        id: input.projectId,
-      },
+    const project = await this.repository.findProjectByIdAndUserId({
+      id: input.projectId,
+      userId: user.id,
     });
 
     const pgService = new PostgresServices(adminPool);
@@ -32,12 +42,18 @@ export class Actions {
 
     const result = dbNames.map((it) => it.datname);
     return new ApiResponse<typeof result>({
-      message: "Project fetched successfully",
+      message: "Databases fetched successfully",
       statusCode: 200,
       data: result,
     });
   }
 
+  /**
+   * Retrieves all tables of a specific database in a project.
+   * @param input - Object containing projectId and dbName.
+   * @param ctx - Authenticated context.
+   * @returns ApiResponse with table names and primary keys.
+   */
   async getTablesOfADatabase(
     input: { projectId: string; dbName: string },
     ctx: AuthedContext
@@ -45,7 +61,7 @@ export class Actions {
     const { dbName } = input;
     if (dbName === "XXXXX") {
       return new ApiResponse<typeof result>({
-        message: "Table names fetched",
+        message: "No tables found for the specified database",
         statusCode: 200,
         data: [] as {
           tableName: string;
@@ -55,11 +71,9 @@ export class Actions {
     }
     const { user } = ctx;
 
-    const project = await db.project.findUnique({
-      where: {
-        userId: user.id,
-        id: input.projectId,
-      },
+    const project = await this.repository.findProjectByIdAndUserId({
+      userId: user.id,
+      id: input.projectId,
     });
 
     if (!project || !project.dbUser) {
@@ -94,12 +108,18 @@ export class Actions {
     const result = tableNames;
 
     return new ApiResponse<typeof result>({
-      message: "Table names fetched",
+      message: "Tables fetched successfully",
       statusCode: 200,
       data: result,
     });
   }
 
+  /**
+   * Deletes items from a table in a database.
+   * @param input - Object containing projectId, dbName, primaryKey, primaryKeyValues, and tableName.
+   * @param ctx - Authenticated context.
+   * @returns ApiResponse with deletion result.
+   */
   async deleteItemFromDatabase(
     input: {
       projectId: string;
@@ -113,10 +133,11 @@ export class Actions {
     const { projectId, dbName, primaryKey, primaryKeyValues, tableName } =
       input;
 
-    const projectDetails = await db.project.findUnique({
-      where: {
-        id: projectId,
-      },
+    const user = ctx.user;
+
+    const projectDetails = await this.repository.findProjectByIdAndUserId({
+      userId: user.id,
+      id: projectId,
     });
 
     const decryptedRes = encryptionServices.decrypt(
@@ -148,6 +169,12 @@ export class Actions {
     });
   }
 
+  /**
+   * Retrieves paginated content of a table in a database.
+   * @param input - Object containing dbName, tableName, page, limit, and projectId.
+   * @param ctx - Authenticated context.
+   * @returns ApiResponse with table content and pagination.
+   */
   async getTableContent(
     input: {
       dbName: string;
@@ -160,10 +187,9 @@ export class Actions {
   ) {
     const { dbName, tableName, projectId } = input;
 
-    const project = await db.project.findUnique({
-      where: {
-        id: projectId,
-      },
+    const project = await this.repository.findProjectByIdAndUserId({
+      userId: ctx.user.id,
+      id: projectId,
     });
     if (tableName.includes("XXXXX") || dbName === "XXXXX") {
       const result = {
@@ -176,7 +202,7 @@ export class Actions {
         },
       };
       return new ApiResponse<typeof result>({
-        message: `Table content fetched for ${tableName} from ${dbName}`,
+        message: "No content found for the specified table or database",
         statusCode: 200,
         data: result,
       });
@@ -205,11 +231,18 @@ export class Actions {
 
     const result = tableContent;
     return new ApiResponse<typeof result>({
-      message: `Table content fetched for ${tableName} from ${dbName}`,
+      message: "Table content fetched successfully",
       statusCode: 200,
       data: result,
     });
   }
+
+  /**
+   * Searches items in a table using a custom SQL query object.
+   * @param input - Object containing dbName, tableName, projectId, and sqlQueryObj.
+   * @param ctx - Authenticated context.
+   * @returns ApiResponse with search results.
+   */
   async searchItemsUsingSqlQuery(
     input: {
       dbName: string;
@@ -227,14 +260,13 @@ export class Actions {
     const { dbName, tableName, projectId, sqlQueryObj } = input;
 
     // console.log(sqlQueryObj);
-    const project = await db.project.findUnique({
-      where: {
-        id: projectId,
-      },
+    const project = await this.repository.findProjectByIdAndUserId({
+      userId: ctx.user.id,
+      id: projectId,
     });
 
     if (sqlQueryObj.length >= 50) {
-      throw new Error(`Very large sql query`);
+      throw new Error(`SQL query too large`);
       return;
     }
 
@@ -256,7 +288,7 @@ export class Actions {
     ) {
       const result: any[] = [];
       return new ApiResponse<typeof result>({
-        message: `Invalid data for sql query sent`,
+        message: "Invalid data for SQL query sent",
         statusCode: 400,
         data: result,
       });
@@ -308,11 +340,18 @@ export class Actions {
     });
 
     return new ApiResponse<typeof result.data>({
-      message: `Table content fetched for ${tableName} from ${dbName}, ${result?.message}`,
+      message: "Table content fetched successfully",
       statusCode: 200,
       data: result.data,
     });
   }
+
+  /**
+   * Updates multiple rows in a table using a SQL query object.
+   * @param input - Object containing dbName, tableName, projectId, primaryKey, and sqlQueryObj.
+   * @param ctx - Authenticated context.
+   * @returns ApiResponse with update results.
+   */
   async updateMultipleRows(
     input: {
       dbName: string;
@@ -326,15 +365,14 @@ export class Actions {
     const { dbName, tableName, projectId, primaryKey, sqlQueryObj } = input;
 
     // console.log(sqlQueryObj);
-    const project = await db.project.findUnique({
-      where: {
-        id: projectId,
-      },
+    const project = await this.repository.findProjectByIdAndUserId({
+      userId: ctx.user.id,
+      id: projectId,
     });
     if (tableName.includes("XXXXX") || dbName === "XXXXX") {
       const result: any[] = [];
       return new ApiResponse<typeof result>({
-        message: `Table content fetched for ${tableName} from ${dbName}`,
+        message: "No content found for the specified table or database",
         statusCode: 200,
         data: result,
       });
@@ -419,22 +457,27 @@ WHERE t.%I = u.%I;
     });
 
     return new ApiResponse<typeof result.data>({
-      message: `${result?.message}, Table content updated for ${tableName} from ${dbName}`,
+      message: "Table content updated successfully",
       statusCode: 200,
       data: result.data,
     });
   }
 
+  /**
+   * Resumes access to all inactive databases for a project.
+   * @param input - Object containing projectId.
+   * @param ctx - Authenticated context.
+   * @returns ApiResponse indicating the result.
+   */
   async resumeDatabases(
     input: {
       projectId: string;
     },
     ctx: AuthedContext
   ) {
-    const project = await db.project.findUnique({
-      where: {
-        id: input.projectId,
-      },
+    const project = await this.repository.findProjectByIdAndUserId({
+      userId: ctx.user.id,
+      id: input.projectId,
     });
 
     if (!project) {
@@ -449,27 +492,24 @@ WHERE t.%I = u.%I;
       });
     }
 
-    await db.project.update({
-      where: {
-        id: input.projectId,
-      },
-      data: {
-        inactiveDatabases: [],
-      },
-    });
+    await this.repository.markActiveStatusForDatabase({ id: input.projectId });
 
     return new ApiResponse({
       statusCode: 200,
-      message: `Databases ${project?.inactiveDatabases?.join(", ")} resume`,
+      message: "Databases resumed successfully",
     });
   }
 
+  /**
+   * Retrieves dashboard data for a project.
+   * @param input - Object containing projectId.
+   * @param ctx - Authenticated context.
+   * @returns ApiResponse with dashboard data.
+   */
   async getDashboardData(input: { projectId: string }, ctx: AuthedContext) {
-    const project = await db.project.findUnique({
-      where: {
-        id: input.projectId,
-        userId: ctx.user.id,
-      },
+    const project = await this.repository.findProjectByIdAndUserId({
+      userId: ctx.user.id,
+      id: input.projectId,
     });
 
     if (!project) {
@@ -493,11 +533,10 @@ WHERE t.%I = u.%I;
       dbUserName: project.dbUser!,
     });
 
-    const whitelistedIpCnt = await db.whiteListedIP.count({
-      where: {
+    const whitelistedIpCnt =
+      await this.repository.getAllWhiteListedIpCountForProject({
         projectId: input.projectId,
-      },
-    });
+      });
 
     const result = {
       project: {
@@ -523,58 +562,94 @@ WHERE t.%I = u.%I;
     };
 
     return new ApiResponse<typeof result>({
-      message: "Dashboard Data fetched",
+      message: "Dashboard data fetched successfully",
       statusCode: 200,
       data: result,
     });
   }
 
+  /**
+   * Adds a new IP address to the whitelist for a project.
+   * @param input - Object containing projectId and ip.
+   * @param ctx - Authenticated context.
+   * @returns ApiResponse with the new whitelisted IP.
+   */
   async addNewWhiteListedIp(
     input: { projectId: string; ip: string },
     ctx: AuthedContext
   ) {
-    if (!isValidIP(input.ip)) {
-      throw new Error("Require a valid IPv4");
+    const ipWithCIDR = input.ip.includes("/") ? input.ip : input.ip + "/32";
+    if (ipWithCIDR.startsWith("/")) {
+      throw new Error("Require a valid IPv4 with or without CIDR");
     }
-    const project = await db.project.findUnique({
-      where: {
-        id: input.projectId,
-        userId: ctx.user.id,
-      },
+    if (!isValidIP(ipWithCIDR.split("/")[0]!)) {
+      throw new Error("Require a valid IPv4 with or without CIDR");
+    }
+
+    const validCIDR = ["0", "32", "64", "128"];
+    if (!validCIDR.some((val) => val == ipWithCIDR.split("/")[1]!)) {
+      throw new Error("Require a valid IPv4 with or without CIDR");
+    }
+
+    const project = await this.repository.findProjectByIdAndUserId({
+      userId: ctx.user.id,
+      id: input.projectId,
     });
 
     if (!project) {
       throw new Error("Project not found");
     }
-    const newIp = await db.whiteListedIP.create({
-      data: {
-        projectId: project.id,
-        dbName: project.dbName!,
-        ip: input.ip,
-        isActive: false,
-      },
+    const newIp = await this.repository.addNewWhitelistedIP({
+      projectId: project.id,
+      dbName: project.dbName!,
+      ip: ipWithCIDR.split("/")[0] == "0.0.0.0" ? "0.0.0.0/0" : ipWithCIDR,
+      isActive: false,
     });
 
     dirtyBitForWhitelistingDB.makeItDirty();
 
     return new ApiResponse<typeof newIp>({
       statusCode: 201,
-      message: "New IP whitelisted",
+      message: "New IP whitelisted successfully",
       data: newIp,
     });
   }
 
+  /**
+   * Retrieves all whitelisted IPs for a project.
+   * @param input - Object containing projectId.
+   * @param ctx - Authenticated context.
+   * @returns ApiResponse with whitelisted IPs.
+   */
   async getWhitelistedIps(input: { projectId: string }, ctx: AuthedContext) {
-    const whitelistedIps = await db.whiteListedIP.findMany({
-      where: {
-        projectId: input.projectId,
-      },
+    const whitelistedIps = await this.repository.getAllWhiteListedIpForProject({
+      projectId: input.projectId,
     });
 
     return new ApiResponse<typeof whitelistedIps>({
-      statusCode: 201,
-      message: "Whitelisted ips fetched",
+      statusCode: 200,
+      message: "Whitelisted IPs fetched successfully",
       data: whitelistedIps,
+    });
+  }
+
+  /**
+   * Removes a whitelisted IP by its ID.
+   * @param input - Object containing the IP ID.
+   * @param ctx - Authenticated context.
+   * @returns ApiResponse indicating removal.
+   */
+  async removeWhiteListedIp(input: { id: string }, ctx: AuthedContext) {
+    await this.repository.deleteWhitelistedIp({
+      id: input.id,
+    });
+
+    dirtyBitForWhitelistingDB.makeItDirty();
+
+    return new ApiResponse({
+      statusCode: 200,
+      message: "Whitelisted IP removed successfully",
+      data: null,
     });
   }
 }

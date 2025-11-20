@@ -7,17 +7,27 @@ import { adminPool, PostgresServices } from "../../services/pg";
 import { envConf } from "../../lib/envConf";
 import format from "pg-format";
 import { notificationJobQueue } from "../../../server";
+import { Repository } from "./repository";
 
 export class Actions {
+  repository: Repository;
+  constructor() {
+    this.repository = new Repository();
+  }
+
+  /**
+   * Creates a new Discord integration for the authenticated user.
+   * @param input - Object containing channelId.
+   * @param ctx - Authenticated context.
+   * @returns ApiResponse with the created DiscordIntegration.
+   */
   async newIntegration(input: { channelId: string }, ctx: AuthedContext) {
     const { channelId } = input;
     const { user } = ctx;
 
-    const newIntegration = await db.discordIntegration.create({
-      data: {
-        channelId,
-        userId: user.id,
-      },
+    const newIntegration = await this.repository.addNewDiscordIntegration({
+      channelId,
+      userId: user.id,
     });
 
     notificationJobQueue.add("new_discord_integration", {
@@ -31,13 +41,17 @@ export class Actions {
     });
   }
 
+  /**
+   * Retrieves the Discord integration for the authenticated user.
+   * @param input - Not used.
+   * @param ctx - Authenticated context.
+   * @returns ApiResponse with the DiscordIntegration if found.
+   */
   async getDiscordIntegration(input: undefined, ctx: AuthedContext) {
     const { user } = ctx;
 
-    const integration = await db.discordIntegration.findUnique({
-      where: {
-        userId: user.id,
-      },
+    const integration = await this.repository.getDiscordIntegration({
+      userId: user.id,
     });
 
     if (!integration) {

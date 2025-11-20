@@ -17,6 +17,7 @@ import { envConf } from "./lib/envConf";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useUserStore } from "./store/user-store";
 import { Toaster } from "sonner";
+import { ThemeProvider } from "./components/shared/theme-provider";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -77,8 +78,10 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
-        <Outlet />
-        <Toaster position="top-right" richColors/>
+        <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+          <Outlet />
+        </ThemeProvider>
+        <Toaster position="top-right" richColors />
       </TRPCProvider>
     </QueryClientProvider>
   );

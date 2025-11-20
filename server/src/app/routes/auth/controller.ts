@@ -2,8 +2,20 @@ import { type Request, type Response } from "express";
 import { db } from "../../lib/db";
 import { ApiResponse, ErrorResponse } from "../../lib/api.helper";
 import { notificationJobQueue } from "../../../server";
+import { Repository } from "./repository";
 
 class Controller {
+  repository: Repository;
+
+  constructor() {
+    this.repository = new Repository();
+  }
+
+  /**
+   * Handles the GitHub OAuth callback, manages user login/signup, and notifies the frontend.
+   * @param req - Express request object.
+   * @param res - Express response object.
+   */
   public async githubCallback(req: Request, res: Response): Promise<void> {
     const user = req.user as any;
 
@@ -31,12 +43,7 @@ class Controller {
     }
 
     const email = user.emails?.[0]?.value;
-    const existingUser = await db.user.findUnique({
-      where: { email },
-      select: {
-        id: true,
-      },
-    });
+    const existingUser = await this.repository.getUserByEmail({ email });
 
     if (existingUser) {
       res.send(`
@@ -60,11 +67,9 @@ class Controller {
       return;
     }
 
-    const newUser = await db.user.create({
-      data: {
-        name: user?.displayName || user?.username,
-        email: user?.emails[0].value,
-      },
+    const newUser = await this.repository.createNewUser({
+      name: user?.displayName || user?.username,
+      email: user?.emails[0].value,
     });
 
     notificationJobQueue.add("welcome_mail", {
@@ -94,21 +99,20 @@ class Controller {
   }
 
   /**
-   * This controller provides profile from database along with image of the profile from github
-   * @param req
-   * @param res
+   * Fetches the authenticated user's profile from the database and includes their GitHub avatar.
+   * @param req - Express request object.
+   * @param res - Express response object.
    */
   public async getProfile(req: Request, res: Response): Promise<void> {
     const user = req.user as any;
-    const userData = await db.user.findUnique({
-      where: {
-        email: user?.emails[0].value,
-      },
+    const email = user?.emails[0].value;
+    const userData = await this.repository.getUserByEmail({
+      email,
     });
     res.json(
       new ApiResponse({
         statusCode: 200,
-        message: "Profile fetched",
+        message: "Profile fetched successfully",
         data: {
           avatar: user?.photos[0].value,
           ...userData,
@@ -118,16 +122,16 @@ class Controller {
   }
 
   /**
-   * Simple route to logout logged in user
-   * @param req
-   * @param res
+   * Logs out the currently authenticated user.
+   * @param req - Express request object.
+   * @param res - Express response object.
    */
   public async logout(req: Request, res: Response): Promise<void> {
     req.logout((err) => {
       if (err) {
         throw new ErrorResponse({
           statusCode: 400,
-          message: "Failed to logout",
+          message: "Logout failed",
           success: false,
         });
       }

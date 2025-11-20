@@ -118,9 +118,7 @@ cron.schedule("*/15 * * * *", async () => {
     ];
 
     let newIpRules = whiteListedIp?.map((it) => {
-      return `host ${it.project?.dbName} ${it.project.dbUser} ${it.ip}/${
-        it.ip === "0.0.0.0" ? "0" : "32"
-      } scram-sha-256`;
+      return `host ${it.project?.dbName} ${it.project.dbUser} ${it.ip} scram-sha-256`;
     });
 
     contentToWrite = [...contentToWrite, ...newIpRules];
