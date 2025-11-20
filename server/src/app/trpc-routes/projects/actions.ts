@@ -12,8 +12,13 @@ import logger, { loggerMetadata } from "../../lib/logger";
 import { cloudinaryServices } from "../../services/cloudinary";
 import axios, { AxiosError } from "axios";
 import { dirtyBitForWhitelistingDB } from "../../services/dirty-bit-service";
+import { Repository } from "./repository";
 
 export class Actions {
+  repository: Repository;
+  constructor() {
+    this.repository = new Repository();
+  }
   async newProject(
     input: { projectTitle: string; projectDescription: string },
     ctx: AuthedContext
@@ -38,25 +43,14 @@ export class Actions {
     const encryptedPassword = encryptionServices.encrypt(dbInfo.dbPassword);
 
     // console.log({dbInfo,encryptedPassword});
-    const newProject = await db.project.create({
-      data: {
-        projectTitle,
-        projectDescription,
-        userId: user.id,
-        dbUser: dbInfo.dbUsername, // Store the generated username
-        dbPassword: encryptedPassword,
-        dbName: dbInfo.dbName,
-        dbDomain: envConf.DATABASE_HOST,
-      },
-    });
-
-    await db.whiteListedIP.create({
-      data: {
-        ip: "0.0.0.0",
-        dbName: dbInfo.dbName,
-        projectId: newProject.id,
-        isActive: false,
-      },
+    const newProject = await this.repository.createNewProject({
+      projectTitle,
+      projectDescription,
+      userId: user.id,
+      dbUser: dbInfo.dbUsername, // Store the generated username
+      dbPassword: encryptedPassword,
+      dbName: dbInfo.dbName,
+      dbDomain: envConf.DATABASE_HOST,
     });
 
     dirtyBitForWhitelistingDB.makeItDirty();
@@ -92,16 +86,8 @@ export class Actions {
   async getProjects(input: undefined, ctx: AuthedContext) {
     const { user } = ctx;
 
-    const projects = await db.project.findMany({
-      where: {
-        userId: user.id,
-      },
-      select: {
-        projectTitle: true,
-        projectDescription: true,
-        id: true,
-        inactiveDatabases: true,
-      },
+    const projects = await this.repository.readProjectsFromDb({
+      userId: user.id,
     });
 
     return new ApiResponse<typeof projects>({
@@ -114,11 +100,9 @@ export class Actions {
   async getProjectById(input: { projectId: string }, ctx: AuthedContext) {
     const { user } = ctx;
 
-    const project = await db.project.findUnique({
-      where: {
-        userId: user.id,
-        id: input.projectId,
-      },
+    const project = await this.repository.getUniqueProject({
+      userId: user.id,
+      projectId: input.projectId,
     });
 
     if (!project) {
@@ -157,13 +141,8 @@ export class Actions {
   }
 
   async getAllBackups(input: { projectId: string }, ctx: AuthedContext) {
-    const backups = await db.databaseBackups.findMany({
-      where: {
-        projectId: input.projectId,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
+    const backups = await this.repository.getAllDatabaseBackups({
+      projectId: input.projectId,
     });
 
     return new ApiResponse<typeof backups>({
@@ -180,11 +159,9 @@ export class Actions {
     const { user } = ctx;
 
     // Verify project belongs to user
-    const project = await db.project.findUnique({
-      where: {
-        id: input.projectId,
-        userId: user.id,
-      },
+    const project = await this.repository.getUniqueProject({
+      projectId: input.projectId,
+      userId: user.id,
     });
 
     if (!project) {
@@ -192,11 +169,9 @@ export class Actions {
     }
 
     // Get the backup record
-    const backup = await db.databaseBackups.findUnique({
-      where: {
-        id: input.backupId,
-        projectId: input.projectId,
-      },
+    const backup = await this.repository.getUniqueDatabaseBackup({
+      backupId: input.backupId,
+      projectId: input.projectId,
     });
 
     if (!backup) {

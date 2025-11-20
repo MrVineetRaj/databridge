@@ -40,6 +40,7 @@ import { useTRPC } from "~/lib/trpc.config";
 import type { IProject } from "~/lib/types";
 import { cn } from "~/lib/utils";
 import { useUserStore } from "~/store/user-store";
+import { ModeToggle } from "~/components/shared/mode-toggle";
 
 const ConsoleLayout = () => {
   const isMobile = useIsMobile();
@@ -62,21 +63,21 @@ const ConsoleLayout = () => {
     })
   );
 
-  useEffect(() => {
-    console.log({ loadingUser, isAuthenticated, error });
-    if (!loadingUser && !isAuthenticated && error) {
-      navigate("/");
-    }
-  }, [isAuthenticated, error, loadingUser]);
+  // useEffect(() => {
+  //   console.log({ loadingUser, isAuthenticated, error });
+  //   if (!loadingUser && !isAuthenticated && error) {
+  //     navigate("/");
+  //   }
+  // }, [isAuthenticated, error, loadingUser]);
 
-  useEffect(() => {
-    if (reloadReq) {
-      queryClient.invalidateQueries(
-        trpc.projectRoutes.getProjects.queryOptions()
-      );
-      setReloadReq(false);
-    }
-  }, [reloadReq]);
+  // useEffect(() => {
+  //   if (reloadReq) {
+  //     queryClient.invalidateQueries(
+  //       trpc.projectRoutes.getProjects.queryOptions()
+  //     );
+  //     setReloadReq(false);
+  //   }
+  // }, [reloadReq]);
 
   useEffect(() => {
     if (projectDetailsFromDb?.data) {
@@ -121,7 +122,7 @@ const ConsoleLayout = () => {
       <SidebarProvider className={cn(isMobile ? "w-0" : "w-80")}>
         <Sidebar className=" backdrop-blur-sm border-r border-border/50 shadow-xl w-80">
           {/* Header */}
-          <SidebarHeader className="px-6 py-4 border-b border-border/50 bg-white">
+          <SidebarHeader className="px-6 py-4 border-b border-border/50 bg-sidebar">
             <div className="flex items-center justify-between">
               <Link to={"/console"} className="flex items-center gap-3 group">
                 <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -142,7 +143,7 @@ const ConsoleLayout = () => {
             </div>
           </SidebarHeader>
 
-          <SidebarContent className="px-4 py-6  bg-white ">
+          <SidebarContent className="px-4 py-6  bg-sidebar ">
             {/* Project Info Card */}
             {projectDetails && (
               <div className="mb-6 p-3 bg-linear-to-r from-primary/10 to-chart-1/10 rounded-lg border border-primary/20">
@@ -262,7 +263,9 @@ const ConsoleLayout = () => {
                     "hover:bg-accent/50 hover:shadow-sm"
                   )}
                   onClick={() => {
-                    navigate(location.pathname + "?configuration-tab=integrations");
+                    navigate(
+                      location.pathname + "?configuration-tab=integrations"
+                    );
                   }}
                 >
                   <div
@@ -353,7 +356,7 @@ const ConsoleLayout = () => {
           </SidebarContent>
 
           {/* Footer */}
-          <SidebarFooter className="p-4 border-t border-border/50  bg-white">
+          <SidebarFooter className="p-4 border-t border-border/50  bg-sidebar">
             <Card className="bg-sidebar/50 backdrop-blur-sm border-border/50">
               <CardContent className="p-3">
                 <div className="flex items-center gap-3">
@@ -373,6 +376,7 @@ const ConsoleLayout = () => {
                       {user?.email || "user@example.com"}
                     </p>
                   </div>
+
                   <Button
                     variant="ghost"
                     size="sm"
@@ -381,6 +385,7 @@ const ConsoleLayout = () => {
                   >
                     <LogOutIcon className="w-4 h-4" />
                   </Button>
+                  <ModeToggle />
                 </div>
               </CardContent>
             </Card>
