@@ -45,7 +45,7 @@ class DiscordService {
     channelId: string;
     title: string;
     description: string;
-    notificationType: string;
+    notificationType: "error" | "warning" | "success";
     resourceDetails: { label: string; url: string }[];
   }) {
     if (!this.isReady) {

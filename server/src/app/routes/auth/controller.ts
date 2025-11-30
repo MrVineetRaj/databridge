@@ -72,11 +72,23 @@ class Controller {
       email: user?.emails[0].value,
     });
 
-    notificationJobQueue.add("welcome_mail", {
-      username: newUser.name,
-      email: newUser.email,
-      platforms: ["mail"],
-    });
+    notificationJobQueue.add(
+      "welcome_mail",
+      {
+        username: newUser.name,
+        email: newUser.email,
+        platforms: ["mail"],
+      },
+      {
+        attempts: 5, 
+        backoff: {
+          type: "exponential", 
+          delay: 5000, 
+        },
+        removeOnComplete: true, 
+        removeOnFail: false, 
+      }
+    );
 
     res.send(`
         <html>

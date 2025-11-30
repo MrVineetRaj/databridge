@@ -1,6 +1,8 @@
 import { dbInstanceJobQueue, notificationJobQueue } from "../../server";
 import { db } from "../lib/db";
+import { envConf } from "../lib/envConf";
 import logger, { loggerMetadata } from "../lib/logger";
+import { discordService } from "../services/discord";
 import { encryptionServices } from "../services/encryption";
 import { adminPool, PostgresServices } from "../services/pg";
 import { RedisQueueAndWorker } from "../services/redis";
@@ -84,6 +86,13 @@ function initiateDbInstanceJobs({
           },
           {
             delay: 1000 * 60 * 60 * 24 * 30,
+            attempts: 5,
+            backoff: {
+              type: "exponential",
+              delay: 5000,
+            },
+            removeOnComplete: true,
+            removeOnFail: false,
           }
         );
 
@@ -96,11 +105,23 @@ function initiateDbInstanceJobs({
         console.log("integration", integration);
 
         if (integration?.channelId) {
-          notificationJobQueue.add("password_rotated", {
-            projectId,
-            channelId: integration.channelId,
-            platforms: ["discord"],
-          });
+          notificationJobQueue.add(
+            "password_rotated",
+            {
+              projectId,
+              channelId: integration.channelId,
+              platforms: ["discord"],
+            },
+            {
+              attempts: 5,
+              backoff: {
+                type: "exponential",
+                delay: 5000,
+              },
+              removeOnComplete: true,
+              removeOnFail: false,
+            }
+          );
         }
       }
     }
@@ -140,22 +161,43 @@ function initiateDbInstanceJobs({
         },
       });
 
-      await notificationJobQueue.add("pause_database", {
-        platforms: ["discord", "mail"],
-        userName,
-        userEmail,
-        discordChannelId,
-        projectTitle: title,
-        inactiveDatabases: [...oldInactiveDatabases, ...newInactiveDatabases],
-        projectId,
-      });
+      await notificationJobQueue.add(
+        "pause_database",
+        {
+          platforms: ["discord", "mail"],
+          userName,
+          userEmail,
+          discordChannelId,
+          projectTitle: title,
+          inactiveDatabases: [...oldInactiveDatabases, ...newInactiveDatabases],
+          projectId,
+        },
+        {
+          attempts: 5,
+          backoff: {
+            type: "exponential",
+            delay: 5000,
+          },
+          removeOnComplete: true,
+          removeOnFail: false,
+        }
+      );
 
       await dbInstanceJobQueue.add(
         "delete_database",
         {
           projectId,
         },
-        { delay: 1000 * 60 * 60 * 24 * 7 }
+        {
+          delay: 1000 * 60 * 60 * 24 * 7,
+          attempts: 5,
+          backoff: {
+            type: "exponential",
+            delay: 5000,
+          },
+          removeOnComplete: true,
+          removeOnFail: false,
+        }
       );
     }
 
@@ -189,15 +231,27 @@ function initiateDbInstanceJobs({
               inactiveDatabases: [],
             },
           });
-          await notificationJobQueue.add("deleted_databases", {
-            platforms: ["discord", "mail"],
-            userName,
-            userEmail,
-            discordChannelId,
-            projectTitle: projectDetails?.projectDescription,
-            inactiveDatabases: inactiveDatabaseNames,
-            projectId,
-          });
+          await notificationJobQueue.add(
+            "deleted_databases",
+            {
+              platforms: ["discord", "mail"],
+              userName,
+              userEmail,
+              discordChannelId,
+              projectTitle: projectDetails?.projectDescription,
+              inactiveDatabases: inactiveDatabaseNames,
+              projectId,
+            },
+            {
+              attempts: 5,
+              backoff: {
+                type: "exponential",
+                delay: 5000,
+              },
+              removeOnComplete: true,
+              removeOnFail: false,
+            }
+          );
         }
       }
     }
@@ -227,18 +281,16 @@ function initiateDbInstanceJobs({
         },
         {
           delay: 1000 * 60 * 60 * 24 * 7,
+          attempts: 5,
+          backoff: {
+            type: "exponential",
+            delay: 5000,
+          },
+          removeOnComplete: true,
+          removeOnFail: false,
         }
       );
     }
-  });
-
-  queueEvents.on("completed", (job) => {
-    // console.log({
-    //   name:job.
-    // })
-    /*
-    Todo : Mark step status to completed
-    */
   });
 
   worker.on("failed", (job, err) => {
@@ -249,8 +301,34 @@ function initiateDbInstanceJobs({
     console.error(`Job ${job?.id} failed:`, err.message);
   });
 
-  queueEvents.on("waiting", ({ jobId }) => {
-    console.log("New job", jobId);
+  queueEvents.on("failed", async ({ jobId, failedReason }) => {
+    const job = await dbInstanceJobQueue.getJob(jobId);
+
+    const payloadToSend = {
+      jobId: jobId,
+      jobName: job?.name,
+      failedReason: failedReason,
+    };
+    logger.error(
+      "DB  instance worker failed",
+      loggerMetadata.system({
+        filePath: __filename,
+        ...payloadToSend,
+      })
+    );
+
+    await discordService.sendEmbedToChannel({
+      title: "Worker failed",
+      channelId: envConf.ADMIN_DISCORD_CHANNEL_ID,
+      description: `\`\`\`${JSON.stringify(payloadToSend)}\`\`\``,
+      notificationType: "error",
+      resourceDetails: [
+        {
+          label: "grafana",
+          url: "https://monitoring.databridge.unknownbug.tech/",
+        },
+      ],
+    });
   });
 
   dbInstanceJobInstance = dbInstanceJobs;

@@ -1,4 +1,4 @@
-import { discordClient } from "../../server";
+import { discordClient, notificationJobQueue } from "../../server";
 import { db } from "../lib/db";
 import { envConf } from "../lib/envConf";
 import logger, { loggerMetadata } from "../lib/logger";
@@ -166,7 +166,7 @@ function initiateNotificationJobs({
         });
       }
     }
-  });
+  }, 10);
 
   worker.on("failed", (job, err) => {
     /**
@@ -183,8 +183,34 @@ function initiateNotificationJobs({
     console.error(`Job ${job?.id} failed:`, err.message);
   });
 
-  queueEvents.on("waiting", ({ jobId }) => {
-    console.log("New job", jobId);
+  queueEvents.on("failed", async ({ jobId, failedReason }) => {
+    const job = await notificationJobQueue.getJob(jobId);
+
+    const payloadToSend = {
+      jobId: jobId,
+      jobName: job?.name,
+      failedReason: failedReason,
+    };
+
+    logger.error(
+      "Notification worker failed",
+      loggerMetadata.system({
+        filePath: __filename,
+        ...payloadToSend,
+      })
+    );
+    await discordService.sendEmbedToChannel({
+      title: "Worker failed",
+      channelId: envConf.ADMIN_DISCORD_CHANNEL_ID,
+      description: `\`\`\`${JSON.stringify(payloadToSend)}\`\`\``,
+      notificationType: "error",
+      resourceDetails: [
+        {
+          label: "grafana",
+          url: "https://monitoring.databridge.unknownbug.tech/",
+        },
+      ],
+    });
   });
 
   initiateNotificationJobInstance = notificationJobInstance;

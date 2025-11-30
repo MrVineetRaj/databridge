@@ -85,7 +85,19 @@ cron.schedule("0 0 */7 * *", async () => {
 
   Object.values(requiredCredentialsMap).forEach((databaseData) => {
     if (databaseData.newInactiveDatabases.length == 0) return;
-    dbInstanceJobQueue.add("pause_db_connection", { ...databaseData });
+    dbInstanceJobQueue.add(
+      "pause_db_connection",
+      { ...databaseData },
+      {
+        attempts: 5,
+        backoff: {
+          type: "exponential",
+          delay: 5000,
+        },
+        removeOnComplete: true,
+        removeOnFail: false,
+      }
+    );
   });
 });
 
