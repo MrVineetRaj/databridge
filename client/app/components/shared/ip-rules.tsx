@@ -32,6 +32,23 @@ export const WhitelistedIPs = () => {
         projectId: project_id as string,
       })
     );
+
+  const removeWhiteListedIP = useMutation(
+    trpc.dbInstanceRoutes.removeWhiteListedIP.mutationOptions({
+      onSuccess: (res) => {
+        toast.success(res.message, {
+          id: "ip-config",
+          duration: 3000,
+        });
+      },
+      onError: (err) => {
+        toast.error(err.message || "Couldn't add IP,try again later", {
+          id: "ip-config",
+          duration: 3000,
+        });
+      },
+    })
+  );
   const addNewIP = useMutation(
     trpc.dbInstanceRoutes.addNewWhiteListedIp.mutationOptions({
       onSuccess: (res) => {
@@ -133,19 +150,21 @@ export const WhitelistedIPs = () => {
                       "text-xs rounded-full px-2 ",
                       ipDetails.isActive
                         ? "bg-primary/10 text-primary"
-                        : "bg-destructive/10 text-destructive"
+                        : "bg-orange-500/10 text-orange-500"
                     )}
                   >
-                    {ipDetails.isActive ? "active" : "inactive"}
+                    {ipDetails.isActive ? "active" : "processing"}
                   </span>
-                  <TrashIcon className="size-4 text-destructive cursor-pointer" />
+                  <TrashIcon
+                    className="size-4 text-destructive cursor-pointer"
+                    onClick={() => {
+                      removeWhiteListedIP.mutateAsync({ id: ipDetails.id });
+                    }}
+                  />
                 </span>
               </span>
             );
           })}
-          <p className="text-center italic text-sm mt-2">
-            new IP take 1.5hrs to reflect
-          </p>
         </span>
       ) : (
         <p className="text-center w-full text-sm italic mt-4">

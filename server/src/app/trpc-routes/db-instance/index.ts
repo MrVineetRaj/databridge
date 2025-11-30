@@ -106,6 +106,14 @@ export function registerRoutes() {
         })
       )
       .query(TRPCAsyncHandler(actions.getWhitelistedIps.bind(actions))),
+
+    removeWhiteListedIP: protectedProcedure
+      .input(
+        z.object({
+          id: z.string(),
+        })
+      )
+      .mutation(TRPCAsyncHandler(actions.removeWhiteListedIp.bind(actions))),
   });
 
   return dbInstanceRoutes;

@@ -52,7 +52,7 @@ const ConsolePage = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-accent to-secondary">
+    <div className="min-h-screen bg-linear-to-br from-background via-accent to-secondary">
       <Navbar />
 
       {/* Floating Background Elements */}

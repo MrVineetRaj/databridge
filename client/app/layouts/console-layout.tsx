@@ -122,7 +122,7 @@ const ConsoleLayout = () => {
       <SidebarProvider className={cn(isMobile ? "w-0" : "w-80")}>
         <Sidebar className=" backdrop-blur-sm border-r border-border/50 shadow-xl w-80">
           {/* Header */}
-          <SidebarHeader className="px-6 py-4 border-b border-border/50 bg-sidebar">
+          <SidebarHeader className="px-6 py-4 border-b border-border/50 bg-card">
             <div className="flex items-center justify-between">
               <Link to={"/console"} className="flex items-center gap-3 group">
                 <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -143,7 +143,7 @@ const ConsoleLayout = () => {
             </div>
           </SidebarHeader>
 
-          <SidebarContent className="px-4 py-6  bg-sidebar ">
+          <SidebarContent className="px-4 py-6  bg-card ">
             {/* Project Info Card */}
             {projectDetails && (
               <div className="mb-6 p-3 bg-linear-to-r from-primary/10 to-chart-1/10 rounded-lg border border-primary/20">
@@ -196,7 +196,7 @@ const ConsoleLayout = () => {
                         key={link}
                         className={cn(
                           "group relative flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200",
-                          "hover:bg-accent/50 hover:shadow-sm",
+                          !isActive && "hover:bg-accent/50 hover:shadow-sm",
                           isActive &&
                             "bg-primary text-primary-foreground shadow-lg",
                           isDisabled && "opacity-50 cursor-not-allowed"
@@ -356,7 +356,7 @@ const ConsoleLayout = () => {
           </SidebarContent>
 
           {/* Footer */}
-          <SidebarFooter className="p-4 border-t border-border/50  bg-sidebar">
+          <SidebarFooter className="p-4 border-t border-border/50  bg-card">
             <Card className="bg-sidebar/50 backdrop-blur-sm border-border/50">
               <CardContent className="p-3">
                 <div className="flex items-center gap-3">
