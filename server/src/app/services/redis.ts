@@ -67,10 +67,12 @@ export class RedisQueueAndWorker {
     return queueEvents;
   }
   getWorker<T = any>(
-    callbackFn: (job: Job<T, any, string>) => Promise<void>
+    callbackFn: (job: Job<T, any, string>) => Promise<void>,
+    concurrency: number = 5
   ): Worker<T, any, string> {
     const worker = new Worker<T, any, string>(this.queueName, callbackFn, {
       connection: this.redisConnection,
+      concurrency,
     });
     return worker;
   }

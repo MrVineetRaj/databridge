@@ -30,13 +30,25 @@ export class Actions {
       userId: user.id,
     });
 
-    notificationJobQueue.add("new_discord_integration", {
-      channelId,
-      platforms: ["discord"],
-    });
+    notificationJobQueue.add(
+      "new_discord_integration",
+      {
+        channelId,
+        platforms: ["discord"],
+      },
+      {
+        attempts: 5,
+        backoff: {
+          type: "exponential",
+          delay: 5000,
+        },
+        removeOnComplete: true,
+        removeOnFail: false,
+      }
+    );
     return new ApiResponse<DiscordIntegration>({
       message: "Integration created successfully",
-      statusCode: 201, 
+      statusCode: 201,
       data: newIntegration,
     });
   }
@@ -57,7 +69,7 @@ export class Actions {
     if (!integration) {
       return new ApiResponse({
         message: "Project created successfully",
-        statusCode: 201, 
+        statusCode: 201,
       });
     }
     const result = integration;

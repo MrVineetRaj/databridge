@@ -13,16 +13,6 @@ import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { authRoutes } from "./routes/auth";
 import { appRouter } from "./trpc-routes";
 import { createTRPCContext } from "./trpc";
-import { dbInstanceJobQueue, notificationJobQueue } from "../server";
-import { adminPool, PostgresServices } from "./services/pg";
-import { ApiResponse, AsyncHandler } from "./lib/api.helper";
-import axios, { AxiosError } from "axios";
-import { cloudinaryServices } from "./services/cloudinary";
-import { db } from "./lib/db";
-import { email } from "zod";
-import { encryptionServices } from "./services/encryption";
-import { env } from "process";
-import { UserRole } from "../generated/prisma";
 
 /**
  * Creates and configures an Express application instance.
@@ -148,33 +138,6 @@ export function createExpressApp(): Application {
       createContext: createTRPCContext,
     })
   );
-
-  // app.get("/test", async (req: Request, res: Response) => {
-  //   const user = await db.user.update({
-  //     where: {
-  //       email: "vineetrajrj26@gmail.com",
-  //     },
-  //     data: {
-  //       role: "ADMIN",
-  //     },
-  //   });
-
-  //   const project = await db.project.create({
-  //     data: {
-  //       projectTitle: "DataBridge",
-  //       userId: user?.id,
-  //       projectDescription: "A DBaaS",
-  //       dbName: "databridge",
-  //       dbUser: envConf.DATABASE_ADMIN_USER,
-  //       dbPassword: encryptionServices.encrypt(envConf.DATABASE_ADMIN_PASSWORD),
-  //       dbDomain: "db.databridge.unknownbug.tech:5432",
-  //     },
-  //   });
-
-  //   // const
-
-  //   res.send("OK");
-  // });
 
   return app;
 }

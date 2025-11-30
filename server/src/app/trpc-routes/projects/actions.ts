@@ -63,6 +63,13 @@ export class Actions {
       },
       {
         delay: 1000 * 60 * 60 * 24 * 30,
+        attempts: 5,
+        backoff: {
+          type: "exponential",
+          delay: 5000,
+        },
+        removeOnComplete: true,
+        removeOnFail: false,
       }
     );
     dbInstanceJobQueue.add(
@@ -73,6 +80,13 @@ export class Actions {
       },
       {
         delay: 1000 * 60 * 60 * 24 * 7,
+        attempts: 5,
+        backoff: {
+          type: "exponential",
+          delay: 5000,
+        },
+        removeOnComplete: true,
+        removeOnFail: false,
       }
     );
 
