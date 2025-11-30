@@ -109,13 +109,10 @@ export class Repository {
    * @param params - Object containing project ID.
    * @returns The updated Project.
    */
-  public async deleteWhitelistedIp({ id }: { id: string }): Promise<Project> {
-    return await db.project.update({
+  public async deleteWhitelistedIp({ id }: { id: string }) {
+    await db.whiteListedIP.delete({
       where: {
         id,
-      },
-      data: {
-        inactiveDatabases: [],
       },
     });
   }

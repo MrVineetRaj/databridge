@@ -36,7 +36,7 @@ export class Actions {
     });
     return new ApiResponse<DiscordIntegration>({
       message: "Integration created successfully",
-      statusCode: 201, // 201 Created is more appropriate
+      statusCode: 201, 
       data: newIntegration,
     });
   }
@@ -57,7 +57,7 @@ export class Actions {
     if (!integration) {
       return new ApiResponse({
         message: "Project created successfully",
-        statusCode: 201, // 201 Created is more appropriate
+        statusCode: 201, 
       });
     }
     const result = integration;
